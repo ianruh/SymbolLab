@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "SymEngine",
+        "repositoryURL": "/Users/ianruh/Dev/SymEngine",
+        "state": {
+          "branch": null,
+          "revision": "670443a027660ebb47c436bcd62352268b69c0ee",
+          "version": "0.0.1"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
