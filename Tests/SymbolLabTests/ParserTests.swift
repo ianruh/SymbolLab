@@ -201,6 +201,12 @@ final class ParserTests: XCTestCase {
         testBadString("int(x^2, x, 2, 8),")
         testBadString("()int")
     }
+    
+    func testSpecificCases() {
+        testGoodString("asech(d(64,x)-z!)")
+        testGoodString("acosh(log((8.8+((445!)!)!)^-357))")
+        testGoodString("acosh(int(83-(38!-866/8)^334.30+1.787,(-85+(545*26)^-2/(2+w)^(0+547))*(d-13+51+y),3.50,886))")
+    }
 
     static var allTests = [
         ("Addition Tests", testAddition),
@@ -215,5 +221,6 @@ final class ParserTests: XCTestCase {
         ("Multiple Argument Function Tests", testMultipleArgumentFunction),
         ("Power Tests", testPower),
         ("Power Associativity Tests", testPowerAssociativity),
+        ("Specific test cases", testSpecificCases),
     ]
 }

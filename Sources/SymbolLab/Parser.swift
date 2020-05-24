@@ -7,46 +7,10 @@
 
 import Foundation
 
-//##################### LISTS #######################
-
-private let operations: [Operation] = [Assign([P,P]), Decimal([P,P]), Negative([P,P]), Add([P,P]), Subtract([P,P]), Multiply([P,P]), Divide([P,P]), Power([P,P]), Factorial([P]), Parentheses([P]), Derivative([P,P]), Integral([P,P,P,P]), Sin([P])]
-
-private func getOperationGroups() -> [[Operation]] {
-    let sortedOps = operations.sorted(by: {$0.precedence > $1.precedence})
-    var groupedOps: [[Operation]] = []
-    for op in sortedOps {
-        // Add new list
-        if(groupedOps.count == 0) {
-            groupedOps.append([op])
-            continue
-        }
-
-        // Append to current list
-        if(groupedOps.last!.last!.precedence.getLevel() == op.precedence.getLevel()) {
-            groupedOps[groupedOps.count-1].append(op)
-        } else {
-            groupedOps.append([op])
-            continue
-        }
-    }
-    return groupedOps
-}
-
-private func getIdentifierMap() -> [String: Operation] {
-    var identifierMap: [String: Operation] = [:]
-    for op in operations {
-        identifierMap[op.identifier] = op
-    }
-    return identifierMap
-}
-
-private let groups = getOperationGroups()
-private let identifiers = getIdentifierMap()
-
 //#################### PARSERS ######################
 
-private struct Token: CustomStringConvertible {
-    var description: String {
+public struct Token: CustomStringConvertible {
+    public var description: String {
         if let str = self.str {
             return str
         } else {
@@ -68,18 +32,90 @@ public struct Debug: CustomStringConvertible {
 
 public struct Parser {
     
-    private var debug: (String) -> ()
+    public static let allOperations: [Operation] = [Assign([P,P]),
+                                                    Decimal([P,P]),
+                                                    Negative([P]),
+                                                    Add([P,P]),
+                                                    Subtract([P,P]),
+                                                    Multiply([P,P]),
+                                                    Divide([P,P]),
+                                                    Power([P,P]),
+                                                    Factorial([P]),
+                                                    Parentheses([P]),
+                                                    Derivative([P,P]),
+                                                    Integral([P,P,P,P]),
+                                                    Expand([P]),
+                                                    Sin([P]),
+                                                    AbsoluteValue([P]),
+                                                    ErrorFunction([P]),
+                                                    Cos([P]),
+                                                    Tan([P]),
+                                                    Asin([P]),
+                                                    Acos([P]),
+                                                    Atan([P]),
+                                                    Csc([P]),
+                                                    Sec([P]),
+                                                    Cot([P]),
+                                                    Acsc([P]),
+                                                    Asec([P]),
+                                                    Acot([P]),
+                                                    Sinh([P]),
+                                                    Cosh([P]),
+                                                    Tanh([P]),
+                                                    Asinh([P]),
+                                                    Acosh([P]),
+                                                    Atanh([P]),
+                                                    Csch([P]),
+                                                    Sech([P]),
+                                                    Coth([P]),
+                                                    Acsch([P]),
+                                                    Asech([P]),
+                                                    Acoth([P]),
+                                                    Sqrt([P]),
+                                                    Exp([P]),
+                                                    Log([P])]
     
-    public init(debugMessageHandler: ((String) -> ())? = nil) {
-        if let debug = debugMessageHandler {
-            self.debug = debug
-        } else {
-            self.debug = Parser.simplePrint
-        }
+    private var debug: (String) -> ()
+    private var operations: [Operation]
+    private var groups: [[Operation]]
+    
+    public init(operations: [Operation] = Parser.allOperations, debugMessageHandler: @escaping ((String) -> ()) = Parser.simplePrint) {
+        self.operations = operations
+        self.groups = Parser.getOperationGroups(operations: operations)
+        self.debug = debugMessageHandler
     }
     
-    private static func simplePrint(_ msg: String) {
+    public static func simplePrint(_ msg: String) {
         print(msg)
+    }
+    
+    private static func getOperationGroups(operations: [Operation]) -> [[Operation]] {
+        let sortedOps = operations.sorted(by: {$0.precedence > $1.precedence})
+        var groupedOps: [[Operation]] = []
+        for op in sortedOps {
+            // Add new list
+            if(groupedOps.count == 0) {
+                groupedOps.append([op])
+                continue
+            }
+
+            // Append to current list
+            if(groupedOps.last!.last!.precedence.getLevel() == op.precedence.getLevel()) {
+                groupedOps[groupedOps.count-1].append(op)
+            } else {
+                groupedOps.append([op])
+                continue
+            }
+        }
+        return groupedOps
+    }
+
+    private func getIdentifierMap() -> [String: Operation] {
+        var identifierMap: [String: Operation] = [:]
+        for op in operations {
+            identifierMap[op.identifier] = op
+        }
+        return identifierMap
     }
 
     public func parse(cString strArg: String) -> Node? {
@@ -167,6 +203,20 @@ public struct Parser {
                             continue
                         }
                         if(str == op.identifier) {
+                            // Special case for negative
+                            if(op.identifier == "-" &&  i > 0) {
+                                // previous thing is a node, so this is subtraction, not a negative
+                                if(tokens[i-1].node != nil) {
+                                    i += 1
+                                    continue
+                                }
+                                // Test specific set of possible preceding symbols
+                                if(tokens[i-1].str != nil && !["(",",","^"].contains(tokens[i-1].str!.last!)) {
+                                    i += 1
+                                    continue
+                                }
+                            }
+                            
                             guard i+1 < tokens.count else {
                                 self.debug("Prefix operation '\(op.identifier)' has no operand.")
                                 return []
@@ -175,14 +225,7 @@ public struct Parser {
                                 self.debug("Prefix operation '\(op.identifier)' cannot act on '\(tokens[i+1].str!)'")
                                 return []
                             }
-                            // Special case for negative
-                            if(op.identifier == "-" &&  i > 0) {
-                                // previous thing is a node, so this is subtraction, not negative
-                                if(tokens[i-1].node != nil) {
-                                    i += 1
-                                    continue
-                                }
-                            }
+                            
                             let newNode = op.factory([param])
                             tokens.replaceSubrange(i...i+1, with: [Token(str: nil, node: newNode)])
                             i -= 1 // Because we went from two nodes to 1
@@ -316,7 +359,8 @@ public struct Parser {
                         }
                         
                         guard paramTokens.count == fu.numArguments else {
-                            self.debug("Function '\(fu.identifier)' must have \(fu.numArguments) but was given \(paramTokens.count)")
+                            self.debug("Function '\(fu.identifier)' must have \(fu.numArguments) argument(s) but was given \(paramTokens.count)")
+                            self.debug("Tokens: \(paramTokens)")
                             return []
                         }
                         var params: [Node] = []

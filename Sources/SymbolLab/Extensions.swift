@@ -63,3 +63,19 @@ extension String {
         return level == 0
     }
 }
+
+
+extension Int {
+    public static func random(withDigits digits: Int) -> Int {
+        var str = ""
+        for _ in 0..<digits {
+            str += String(Int.random(in: 0..<9))
+        }
+        return Int(str)!
+    }
+    
+    public static func random(withMaxDigits maxDigits: Int) -> Int {
+        return Int.random(withDigits: Int.random(in: 1...maxDigits))
+    }
+    
+}
