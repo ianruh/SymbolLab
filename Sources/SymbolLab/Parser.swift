@@ -211,7 +211,7 @@ public struct Parser {
                                     continue
                                 }
                                 // Test specific set of possible preceding symbols
-                                if(tokens[i-1].str != nil && !["(",",","^"].contains(tokens[i-1].str!.last!)) {
+                                if(tokens[i-1].str != nil && !["(",",","^","*","/"].contains(tokens[i-1].str!.last!)) {
                                     i += 1
                                     continue
                                 }

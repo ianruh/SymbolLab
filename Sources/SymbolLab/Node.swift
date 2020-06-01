@@ -11,6 +11,12 @@ public protocol Node: CustomStringConvertible {
     var symbol: SymEngine.Symbol? {get}
     var latex: String {get}
     
+    /**
+     This is  a bit of a hack. It will always be a PythonObject, but  I don't want to depend on
+     PythonKit in this module. It should only be used in the SymbolLabTraining module.
+     */
+    var image: Any? {get}
+    
     func generate(withOptions options: GeneratorOptions, depths: Depths) -> Node
 }
 
@@ -34,6 +40,13 @@ extension Node {
      */
     public var isFunction: Bool {
         return self as? Function != nil
+    }
+    
+    /**
+     Default value for image. Should be overriden in the SymbolLabTraining Module.
+     */
+    public var image: Any? {
+        return nil
     }
 }
 

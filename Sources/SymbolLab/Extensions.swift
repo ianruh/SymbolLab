@@ -79,3 +79,14 @@ extension Int {
     }
     
 }
+
+extension Collection where Element: CustomStringConvertible {
+    public func join(separator: String) -> String {
+        var str = ""
+        for e in self.dropLast() {
+            str += "\(e)\(separator)"
+        }
+        str += "\(self[self.endIndex])"
+        return str
+    }
+}

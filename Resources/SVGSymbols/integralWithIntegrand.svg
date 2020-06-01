@@ -1,0 +1,6 @@
+<svg>
+  <polygon points="0,0 40,0 40,100 0,100" stroke="red" fill="none" />
+  <svg x="0" y="0" width="40" height="100" viewBox="1 -76 47 95" preserveAspectRatio="none">
+    <text x="0" y="0" font-family="math" font-size="100px" >∫</text>
+  </svg>
+</svg>
