@@ -67,6 +67,7 @@ public struct Op: Operation {
     public var symbol: Symbol? = nil
     public var description: String = ""
     public var latex: String = ""
+    public var formalSVG: SVGElement? = nil
     
     public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         return Op([])
@@ -88,8 +89,8 @@ public struct Assign: Operation {
     public let identifier: String = "="
     
     // Store the parameters for the node
-    private var left: Node
-    private var right: Node
+    public var left: Node
+    public var right: Node
     
     public var description: String {
         // This is always true
@@ -103,6 +104,16 @@ public struct Assign: Operation {
     
     public var latex: String {
         return "\(self.left.latex)=\(self.right.latex)"
+    }
+    
+    public var formalSVG: SVGElement? {
+        let leftSVGOpt = self.left.formalSVG
+        let rightSVGOpt = self.right.formalSVG
+        let opSVGOpt = SVGFormalSymbols.getSymbol(self.identifier)
+        guard let rightSVG = rightSVGOpt else { return nil }
+        guard let leftSVG = leftSVGOpt else { return nil }
+        guard let opSVG = opSVGOpt else { return nil }
+        return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
     }
     
     public init(_ params: [Node]) {
@@ -138,7 +149,7 @@ public struct Negative: Operation {
     public let identifier: String = "-"
     
     // Store the parameters for the node
-    private var argument: Node
+    public var argument: Node
     
     public var description: String {
         guard self.argument.isBasic || self.argument as? Decimal != nil else {
@@ -158,6 +169,18 @@ public struct Negative: Operation {
             return ""
         }
         return "-\(self.argument.latex)"
+    }
+    
+    public var formalSVG: SVGElement? {
+        guard self.argument.isBasic || self.argument as? Decimal != nil else {
+            print("Missused negative operation : '-\(self.argument)'")
+            return nil
+        }
+        let argSVGOpt = self.argument.formalSVG
+        let opSVGOpt = SVGFormalSymbols.getSymbol(self.identifier)
+        guard let argSVG = argSVGOpt else { return nil }
+        guard let opSVG = opSVGOpt else { return nil }
+        return SVGUtilities.compose(elements: [opSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
     
     public init(_ params: [Node]) {
@@ -184,8 +207,8 @@ public struct Decimal: Operation {
     public let identifier: String = "."
     
     // Store the parameters for the node
-    private var left: Node
-    private var right: Node
+    public var left: Node
+    public var right: Node
     
     public var description: String {
         guard let leftNumber = self.left as? Number else {
@@ -219,6 +242,24 @@ public struct Decimal: Operation {
             return ""
         }
         return "\(leftNumber.latex).\(rightNumber.latex)"
+    }
+    
+    public var formalSVG: SVGElement? {
+        guard let leftNumber = self.left as? Number else {
+            print("Missused decimal operation : '\(self.left).\(self.right)'")
+            return nil
+        }
+        guard let rightNumber = self.right as? Number else {
+            print("Missused decimal operation : '\(self.left).\(self.right)'")
+            return nil
+        }
+        let leftSVGOpt = self.left.formalSVG
+        let rightSVGOpt = self.right.formalSVG
+        let opSVGOpt = SVGFormalSymbols.getSymbol(self.identifier)
+        guard let rightSVG = rightSVGOpt else { return nil }
+        guard let leftSVG = leftSVGOpt else { return nil }
+        guard let opSVG = opSVGOpt else { return nil }
+        return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
     
     public init(_ params: [Node]) {
@@ -291,6 +332,29 @@ public struct Add: Operation {
         }
         
         return "\(leftString)+\(rightString)"
+    }
+    
+    public var formalSVG: SVGElement? {
+        let leftSVGOpt = self.left.formalSVG
+        let rightSVGOpt = self.right.formalSVG
+        let opSVGOpt = SVGFormalSymbols.getSymbol(self.identifier)
+        guard var rightSVG = rightSVGOpt else { return nil }
+        guard var leftSVG = leftSVGOpt else { return nil }
+        guard let opSVG = opSVGOpt else { return nil }
+        
+        // Wrap the sides if needed
+        if let op = self.left as? Operation {
+            if(op.precedence < self.precedence && op.type == .infix) {
+                leftSVG = SVGUtilities.formalParentheses(leftSVG)
+            }
+        }
+        if let op = self.right as? Operation {
+            if(op.precedence < self.precedence && op.type == .infix) {
+                rightSVG = SVGUtilities.formalParentheses(rightSVG)
+            }
+        }
+        
+        return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
     }
     
     public init(_ params: [Node]) {
@@ -369,6 +433,29 @@ public struct Subtract: Operation {
         }
         
         return "\(leftString)-\(rightString)"
+    }
+    
+    public var formalSVG: SVGElement? {
+        let leftSVGOpt = self.left.formalSVG
+        let rightSVGOpt = self.right.formalSVG
+        let opSVGOpt = SVGFormalSymbols.getSymbol(self.identifier)
+        guard var rightSVG = rightSVGOpt else { return nil }
+        guard var leftSVG = leftSVGOpt else { return nil }
+        guard let opSVG = opSVGOpt else { return nil }
+        
+        // Wrap the sides if needed
+        if let op = self.left as? Operation {
+            if(op.precedence < self.precedence && op.type == .infix) {
+                leftSVG = SVGUtilities.formalParentheses(leftSVG)
+            }
+        }
+        if let op = self.right as? Operation {
+            if(op.precedence < self.precedence && op.type == .infix) {
+                rightSVG = SVGUtilities.formalParentheses(rightSVG)
+            }
+        }
+        
+        return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
     }
     
     public init(_ params: [Node]) {
@@ -452,6 +539,29 @@ public struct Multiply: Operation {
         return "\(leftString)\\cdot \(rightString)"
     }
     
+    public var formalSVG: SVGElement? {
+        let leftSVGOpt = self.left.formalSVG
+        let rightSVGOpt = self.right.formalSVG
+        let opSVGOpt = SVGFormalSymbols.getSymbol(self.identifier)
+        guard var rightSVG = rightSVGOpt else { return nil }
+        guard var leftSVG = leftSVGOpt else { return nil }
+        guard let opSVG = opSVGOpt else { return nil }
+        
+        // Wrap the sides if needed
+        if let op = self.left as? Operation {
+            if(op.precedence < self.precedence && op.type == .infix) {
+                leftSVG = SVGUtilities.formalParentheses(leftSVG)
+            }
+        }
+        if let op = self.right as? Operation {
+            if(op.precedence < self.precedence && op.type == .infix) {
+                rightSVG = SVGUtilities.formalParentheses(rightSVG)
+            }
+        }
+        
+        return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
+    }
+    
     public init(_ params: [Node]) {
         self.left = params[0]
         self.right = params[1]
@@ -515,6 +625,21 @@ public struct Divide: Operation {
         return "\\frac{\(self.left.latex)}{\(self.right.latex)}"
     }
     
+    public var formalSVG: SVGElement? {
+        let leftSVGOpt = self.left.formalSVG
+        let rightSVGOpt = self.right.formalSVG
+        let barSVGOpt = SVGFormalSymbols.getSymbol("-")
+        guard let rightSVG = rightSVGOpt else { return nil }
+        guard let leftSVG = leftSVGOpt else { return nil }
+        guard var barSVG = barSVGOpt else { return nil }
+        
+        let rightBB = rightSVG.boundingBox!
+        let leftBB = leftSVG.boundingBox!
+        barSVG.resize(width: max(rightBB.width, leftBB.width), height: SVGOptions.fractionBarThickness)
+        
+        return SVGUtilities.compose(elements: [leftSVG, barSVG, rightSVG], spacing: SVGOptions.fractionSpacing, alignment: .center, direction: .vertical)
+    }
+    
     public init(_ params: [Node]) {
         self.left = params[0]
         self.right = params[1]
@@ -576,7 +701,35 @@ public struct Power: Operation {
     }
     
     public var latex: String {
-        return "\(self.left.latex)^{\(self.right.latex)}"
+        var leftString = self.left.latex
+        if let op = self.left as? Operation {
+            if(op.precedence < self.precedence && op.type == .infix) {
+                leftString = "(\(leftString))"
+            }
+        }
+        return "\(leftString)^{\(self.right.latex)}"
+    }
+    
+    public var formalSVG: SVGElement? {
+        let leftSVGOpt = self.left.formalSVG
+        let rightSVGOpt = self.right.formalSVG
+        guard var leftSVG = leftSVGOpt else { return nil }
+        guard var rightSVG = rightSVGOpt else { return nil }
+        
+        if let op = self.left as? Operation {
+            if(op.precedence < self.precedence && op.type == .infix) {
+                leftSVG = SVGUtilities.formalParentheses(leftSVG)
+            }
+        }
+        
+        rightSVG.scale(by: 0.5)
+        let leftBB = leftSVG.boundingBox!
+        
+        let svg: SVG = SVG(children: [])
+        svg.paste(path: leftSVG, withTopLeftAt: Point(0,0))
+        svg.paste(path: rightSVG, withCenterLeftAt: Point(leftBB.width, 0))
+        svg.minimizeSVG()
+        return svg
     }
     
     public init(_ params: [Node]) {
@@ -639,6 +792,21 @@ public struct Factorial: Operation {
         }
         
         return "\(self.argument.latex)!"
+    }
+    
+    public var formalSVG: SVGElement? {
+        let argSVGOpt = argument.formalSVG
+        let opSVG = SVGFormalSymbols.getSymbol("!")!
+        guard var argSVG = argSVGOpt else { return nil }
+        
+        // Wrap if needed
+        if let op = self.argument as? Operation {
+            if(op.type != .function) {
+                argSVG = SVGUtilities.formalParentheses(argSVG)
+            }
+        }
+        
+        return SVGUtilities.compose(elements: [argSVG, opSVG], spacing: SVGOptions.parethesesSpacing, alignment: .end, direction: .horizontal)
     }
     
     public init(_ params: [Node]) {

@@ -10,12 +10,7 @@ import SymEngine
 public protocol Node: CustomStringConvertible {
     var symbol: SymEngine.Symbol? {get}
     var latex: String {get}
-    
-    /**
-     This is  a bit of a hack. It will always be a PythonObject, but  I don't want to depend on
-     PythonKit in this module. It should only be used in the SymbolLabTraining module.
-     */
-    var image: Any? {get}
+    var formalSVG: SVGElement? {get}
     
     func generate(withOptions options: GeneratorOptions, depths: Depths) -> Node
 }
@@ -41,17 +36,10 @@ extension Node {
     public var isFunction: Bool {
         return self as? Function != nil
     }
-    
-    /**
-     Default value for image. Should be overriden in the SymbolLabTraining Module.
-     */
-    public var image: Any? {
-        return nil
-    }
 }
 
 public struct Number: Node {
-    var value: Int
+    public var value: Int
     
     public var description: String {
         return "\(self.value)"
@@ -65,7 +53,11 @@ public struct Number: Node {
         return "\(self.value)"
     }
     
-    init(_ num: Int) {
+    public var formalSVG: SVGElement? {
+        return SVGUtilities.svg(of: self.description)
+    }
+    
+    public init(_ num: Int) {
         self.value = num
     }
     
@@ -76,7 +68,7 @@ public struct Number: Node {
 }
 
 public struct Variable: Node {
-    var string: String
+    public var string: String
     
     public var description: String {
         return self.string
@@ -90,7 +82,11 @@ public struct Variable: Node {
         return "\(self.string)"
     }
     
-    init(_ str: String) {
+    public var formalSVG: SVGElement? {
+        return SVGUtilities.svg(of: self.string)
+    }
+    
+    public init(_ str: String) {
         self.string = str
     }
     

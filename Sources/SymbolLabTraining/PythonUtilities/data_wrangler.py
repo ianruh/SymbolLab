@@ -415,7 +415,7 @@ class ImageHandler:
 
         return Utilities.getBoundingBox(canvas, bboxes=boundingBoxes), boundingBoxes
 
-    def parentheses(self, arr, spacing=10, bboxes=None):
+    def parentheses(self, arr, spacing, bboxes):
         """
         Wrap arr in paratheses
         bboxes = [bbox]
@@ -443,9 +443,8 @@ class ImageHandler:
         left_right = left_left + left.shape[1]
         canvas[left_top:left_bottom, left_left:left_right] = left
 
-        if(bboxes is not None):
-            boundingBoxes.append({"label": "(", "xmin": left_left,
-                                  "xmax": left_right-1, "ymin": left_top, "ymax": left_bottom-1})
+        boundingBoxes.append({"label": "(", "xmin": left_left,
+                              "xmax": left_right-1, "ymin": left_top, "ymax": left_bottom-1})
 
         # Past in arr
         arr_top = int(canvas.shape[0]/2 - arr.shape[0]/2)
@@ -454,8 +453,7 @@ class ImageHandler:
         arr_right = arr_left + arr.shape[1]
         canvas[arr_top:arr_bottom, arr_left:arr_right] = arr
 
-        if(bboxes is not None):
-            boundingBoxes += Utilities.shiftBBoxes(bboxes, arr_left, arr_top)
+        boundingBoxes += Utilities.shiftBBoxes(bboxes, arr_left, arr_top)
 
         # Paste in right )
         right_top = int(canvas.shape[0]/2 - right.shape[0]/2)
@@ -464,16 +462,12 @@ class ImageHandler:
         right_right = right_left + right.shape[1]
         canvas[right_top:right_bottom, right_left:right_right] = right
 
-        if(bboxes is not None):
-            boundingBoxes.append({"label": ")", "xmin": right_left,
-                                  "xmax": right_right-1, "ymin": right_top, "ymax": right_bottom-1})
+        boundingBoxes.append({"label": ")", "xmin": right_left,
+                              "xmax": right_right-1, "ymin": right_top, "ymax": right_bottom-1})
 
-        if(bboxes is not None):
-            return Utilities.getBoundingBox(canvas, bboxes=boundingBoxes), boundingBoxes
-        else:
-            return Utilities.getBoundingBox(canvas)
+        return Utilities.getBoundingBox(canvas, bboxes=boundingBoxes), boundingBoxes
 
-    def fraction(nom, denom, spacing=20, bboxes=None):
+    def fraction(self, nom, denom, spacing, bboxes):
         """
         Make fraction out of top and bottom
 
@@ -501,9 +495,8 @@ class ImageHandler:
         nom_right = nom_left + nom.shape[1]
         canvas[nom_top:nom_bottom, nom_left:nom_right] = nom
 
-        if(bboxes is not None):
-            boundingBoxes += Utilities.shiftBBoxes(
-                bboxes["nom"], nom_left, nom_top)
+        boundingBoxes += Utilities.shiftBBoxes(
+            bboxes["nom"], nom_left, nom_top)
 
         # Paste bar
         bar_top = nom_bottom + spacing
@@ -512,9 +505,8 @@ class ImageHandler:
         bar_right = bar_left + bar.shape[1]
         canvas[bar_top:bar_bottom, bar_left:bar_right] = bar
 
-        if(bboxes is not None):
-            boundingBoxes.append({"label": "-", "xmin": bar_left,
-                                  "xmax": bar_right-1, "ymin": bar_top, "ymax": bar_bottom-1})
+        boundingBoxes.append({"label": "-", "xmin": bar_left,
+                              "xmax": bar_right-1, "ymin": bar_top, "ymax": bar_bottom-1})
 
         # Paste denominator
         denom_top = bar_bottom + spacing
@@ -523,11 +515,7 @@ class ImageHandler:
         denom_right = denom_left + denom.shape[1]
         canvas[denom_top:denom_bottom, denom_left:denom_right] = denom
 
-        if(bboxes is not None):
-            boundingBoxes += Utilities.shiftBBoxes(
-                bboxes["denom"], denom_left, denom_top)
+        boundingBoxes += Utilities.shiftBBoxes(
+            bboxes["denom"], denom_left, denom_top)
 
-        if(bboxes is not None):
-            return Utilities.getBoundingBox(canvas, bboxes=boundingBoxes), boundingBoxes
-        else:
-            return Utilities.getBoundingBox(canvas)
+        return Utilities.getBoundingBox(canvas, bboxes=boundingBoxes), boundingBoxes

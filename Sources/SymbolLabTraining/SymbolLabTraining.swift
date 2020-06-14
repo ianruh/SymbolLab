@@ -9,9 +9,6 @@ import PythonKit
 import SymbolLab
 
 private let PythonUtilities = Python.import("PythonUtilities.data_wrangler")
-//private let ImageHandlerPythonUtilities = Python.import("PythonUtilities.image_handler")
-
-public typealias EquationImage = (image: PythonObject, boundingBoxes: PythonObject)
 
 public class DataWrangler {
     
@@ -134,6 +131,23 @@ public class ImageHandler {
     public func power(base: EquationImage, exponent: EquationImage) -> EquationImage {
         let bboxes: PythonObject = ["base": base.boundingBoxes, "exp": base.boundingBoxes]
         let tuple = self.imageHandler.power(base.image, exponent.image, self.options.exponentScale, self.options.exponentSpacing, bboxes)
+        return (tuple[0], tuple[1])
+    }
+    
+    /**
+     Put parentheses  around an argument.
+     */
+    public func parentheses(_ arg: EquationImage) -> EquationImage {
+        let tuple = self.imageHandler.parentheses(arg.image, self.options.parenthesesSpacing, arg.boundingBoxes)
+        return (tuple[0], tuple[1])
+    }
+    
+    /**
+     Make a fraction.
+     */
+    public func fraction(nominator: EquationImage, denominator: EquationImage) -> EquationImage {
+        let bboxes: PythonObject = ["nom": nominator.boundingBoxes, "denom": denominator.boundingBoxes]
+        let tuple = self.imageHandler.fraction(nominator.image, denominator.image, self.options.fractionSpacing, bboxes)
         return (tuple[0], tuple[1])
     }
 }

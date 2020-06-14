@@ -80,13 +80,24 @@ extension Int {
     
 }
 
-extension Collection where Element: CustomStringConvertible {
+extension Array where Element: CustomStringConvertible {
     public func join(separator: String) -> String {
         var str = ""
-        for e in self.dropLast() {
-            str += "\(e)\(separator)"
+        if(self.count > 0) {
+            for e in self.dropLast() {
+                str += "\(e)\(separator)"
+            }
+            str += "\(self.last!)"
         }
-        str += "\(self[self.endIndex])"
         return str
+    }
+}
+
+extension Double {
+    /**
+     Get a sixe decimal accuracy number
+     */
+    public var sixAc: String {
+        return String(format: "%0.6f", self)
     }
 }
