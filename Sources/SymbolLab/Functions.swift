@@ -79,10 +79,8 @@ public struct Parentheses: Function {
         return "(\(self.param.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        let argSVGOpt = self.param.formalSVG
-        guard let argSVG = argSVGOpt else { return nil }
-        return SVGUtilities.formalParentheses(argSVG)
+    public var variables: Set<String> {
+        return self.param.variables
     }
     
     public init(_ params: [Node]) {
@@ -108,6 +106,11 @@ public struct Parentheses: Function {
         }
         
         return self.factory(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let argSVG = self.param.svg(using: source) else { return nil }
+        return SVGUtilities.parentheses(argSVG, using: source)
     }
 }
 
@@ -139,9 +142,8 @@ public struct Derivative: Function {
         return "\\frac{d \(topStr)}{d \(bottomStr)}"
     }
     
-    public var formalSVG: SVGElement? {
-        #warning("Not implemented yet")
-        return nil
+    public var variables: Set<String> {
+        return self.diffOf.variables + self.withRespectTo.variables
     }
     
     public init(_ params: [Node]) {
@@ -168,6 +170,11 @@ public struct Derivative: Function {
         }
         
         return self.factory(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        #warning("Not implemented yet")
+        return nil
     }
 }
 
@@ -203,9 +210,8 @@ public struct Integral: Function {
         return "\\int_{\(bottomStr)}^{\(topStr)} \(integrandStr) d\(withRespectToStr)"
     }
     
-    public var formalSVG: SVGElement? {
-        #warning("Not implemented yet")
-        return nil
+    public var variables: Set<String> {
+        return self.integrand.variables + self.withRespectTo.variables + self.lowerBound.variables + self.upperBound.variables
     }
     
     public init(_ params: [Node]) {
@@ -217,6 +223,11 @@ public struct Integral: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        #warning("Not implemented yet")
+        return nil
     }
 }
 
@@ -240,11 +251,8 @@ public struct Expand: Function {
         return self.argument.latex
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -253,6 +261,13 @@ public struct Expand: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -275,9 +290,8 @@ public struct AbsoluteValue: Function {
         return "\\left| \(self.argument.latex) \\right|"
     }
     
-    public var formalSVG: SVGElement? {
-        #warning("Not implemented yet")
-        return nil
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -286,6 +300,13 @@ public struct AbsoluteValue: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let pipeSVG = source.getSymbol("|") else { return nil }
+        guard let argSVG = self.argument.svg(using: source) else { return nil }
+        let pipe2SVG = pipeSVG
+        return SVGUtilities.compose(elements: [pipeSVG, argSVG, pipe2SVG], spacing: SVGOptions.parethesesSpacing, alignment: .center, direction: .horizontal)
     }
 }
 
@@ -308,11 +329,8 @@ public struct ErrorFunction: Function {
         return "\\textrm{erf}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -321,6 +339,13 @@ public struct ErrorFunction: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -343,11 +368,8 @@ public struct Sin: Function {
         return "\\sin(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -356,6 +378,13 @@ public struct Sin: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -378,11 +407,8 @@ public struct Cos: Function {
         return "\\cos(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -391,6 +417,13 @@ public struct Cos: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -413,11 +446,8 @@ public struct Tan: Function {
         return "\\tan(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -426,6 +456,13 @@ public struct Tan: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -448,11 +485,8 @@ public struct Asin: Function {
         return "\\arcsin(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -461,6 +495,13 @@ public struct Asin: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -483,11 +524,8 @@ public struct Acos: Function {
         return "\\arccos(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -496,6 +534,13 @@ public struct Acos: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -518,11 +563,8 @@ public struct Atan: Function {
         return "\\arctan(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -531,6 +573,13 @@ public struct Atan: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -553,11 +602,8 @@ public struct Csc: Function {
         return "\\csc(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -566,6 +612,13 @@ public struct Csc: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -588,11 +641,8 @@ public struct Sec: Function {
         return "\\sec(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -601,6 +651,13 @@ public struct Sec: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -623,11 +680,8 @@ public struct Cot: Function {
         return "\\cot(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -636,6 +690,13 @@ public struct Cot: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -658,11 +719,8 @@ public struct Acsc: Function {
         return "\\textrm{arccsc}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -671,6 +729,13 @@ public struct Acsc: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -693,11 +758,8 @@ public struct Asec: Function {
         return "\\textrm{arcsec}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -706,6 +768,13 @@ public struct Asec: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -728,11 +797,8 @@ public struct Acot: Function {
         return "\\textrm{arccot}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -741,6 +807,13 @@ public struct Acot: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -763,11 +836,8 @@ public struct Sinh: Function {
         return "\\sinh(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -776,6 +846,13 @@ public struct Sinh: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -798,11 +875,8 @@ public struct Cosh: Function {
         return "\\cosh(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -811,6 +885,13 @@ public struct Cosh: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -833,11 +914,8 @@ public struct Tanh: Function {
         return "\\tanh(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -846,6 +924,13 @@ public struct Tanh: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -868,11 +953,8 @@ public struct Asinh: Function {
         return "\\textrm{arcsinh}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -881,6 +963,13 @@ public struct Asinh: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -903,11 +992,8 @@ public struct Acosh: Function {
         return "\\textrm{arccosh}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -916,6 +1002,13 @@ public struct Acosh: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -938,11 +1031,8 @@ public struct Atanh: Function {
         return "\\textrm{arctanh}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -951,6 +1041,13 @@ public struct Atanh: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -973,11 +1070,8 @@ public struct Csch: Function {
         return "\\textrm{csch}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -986,6 +1080,13 @@ public struct Csch: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -1008,11 +1109,8 @@ public struct Sech: Function {
         return "\\textrm{sech}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -1021,6 +1119,13 @@ public struct Sech: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -1043,11 +1148,8 @@ public struct Coth: Function {
         return "\\textrm{coth}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -1056,6 +1158,13 @@ public struct Coth: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -1078,11 +1187,8 @@ public struct Acsch: Function {
         return "\\textrm{arccsch}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -1091,6 +1197,13 @@ public struct Acsch: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -1113,11 +1226,8 @@ public struct Asech: Function {
         return "\\textrm{arcsech}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -1126,6 +1236,13 @@ public struct Asech: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -1148,11 +1265,8 @@ public struct Acoth: Function {
         return "\\textrm{arccoth}(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -1161,6 +1275,13 @@ public struct Acoth: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -1183,12 +1304,8 @@ public struct Sqrt: Function {
         return "\\sqrt{\(self.argument.latex)}"
     }
     
-    public var formalSVG: SVGElement? {
-        #warning("SQRT not really implemented")
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -1197,6 +1314,14 @@ public struct Sqrt: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        #warning("sqrt svg is not really implemented yet")
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -1219,12 +1344,8 @@ public struct Exp: Function {
         return "e^{\(self.argument.latex)}"
     }
     
-    public var formalSVG: SVGElement? {
-        #warning("exponential not really implemented")
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -1233,6 +1354,14 @@ public struct Exp: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        #warning("exp svg is not really implemented yet")
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }
 
@@ -1255,11 +1384,8 @@ public struct Log: Function {
         return "\\log(\(self.argument.latex))"
     }
     
-    public var formalSVG: SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier) else { return nil }
-        guard var argSVG = self.argument.formalSVG else { return nil }
-        argSVG = SVGUtilities.formalParentheses(argSVG)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    public var variables: Set<String> {
+        return self.argument.variables
     }
     
     public init(_ params: [Node]) {
@@ -1268,5 +1394,12 @@ public struct Log: Function {
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+        guard var argSVG = self.argument.svg(using: source) else { return nil }
+        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
 }

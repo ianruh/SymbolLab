@@ -93,6 +93,12 @@ extension Array where Element: CustomStringConvertible {
     }
 }
 
+extension Set {
+    public static func +(lhs: Set, rhs: Set) -> Set {
+        return lhs.union(rhs)
+    }
+}
+
 extension Double {
     /**
      Get a sixe decimal accuracy number

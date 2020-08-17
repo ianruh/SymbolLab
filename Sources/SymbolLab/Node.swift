@@ -8,11 +8,13 @@
 import SymEngine
 
 public protocol Node: CustomStringConvertible {
-    var symbol: SymEngine.Symbol? {get}
+    
+    var symbol: Symbol? {get}
     var latex: String {get}
-    var formalSVG: SVGElement? {get}
+    var variables: Set<String> {get}
     
     func generate(withOptions options: GeneratorOptions, depths: Depths) -> Node
+    func svg(using source: SVGSource) -> SVGElement?
 }
 
 extension Node {
@@ -53,9 +55,7 @@ public struct Number: Node {
         return "\(self.value)"
     }
     
-    public var formalSVG: SVGElement? {
-        return SVGUtilities.svg(of: self.description)
-    }
+    public var variables: Set<String> = []
     
     public init(_ num: Int) {
         self.value = num
@@ -64,6 +64,10 @@ public struct Number: Node {
     public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // No need to use the depths as this is a base node
         return Number(Int.random(withMaxDigits: options.numbers.maxWholeDigits))
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        return SVGUtilities.svg(of: self.description, using: source)
     }
 }
 
@@ -82,8 +86,8 @@ public struct Variable: Node {
         return "\(self.string)"
     }
     
-    public var formalSVG: SVGElement? {
-        return SVGUtilities.svg(of: self.string)
+    public var variables: Set<String> {
+        return [self.string]
     }
     
     public init(_ str: String) {
@@ -93,5 +97,9 @@ public struct Variable: Node {
     public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // No need to use the depths as this is a base node
         Variable(options.variables.names.randomElement()!)
+    }
+    
+    public func svg(using source: SVGSource) -> SVGElement? {
+        return SVGUtilities.svg(of: self.string, using: source)
     }
 }

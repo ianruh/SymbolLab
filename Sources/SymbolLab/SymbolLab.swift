@@ -1,1 +1,2 @@
 
+//public typealias Basic = SymbolicMathBasic
