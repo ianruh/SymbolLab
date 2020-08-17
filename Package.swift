@@ -19,15 +19,21 @@ let package = Package(
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
-         .package(url: "../../SymEngine", from: "0.0.1"),
-         //.package(url: "https://github.com/vapor/postgres-kit.git", from: "2.0.0")
+//        .package(url: "../../SymEngine", from: "0.0.1"),
+        .package(url: "https://github.com/ianruh/SymEngine.swift", from: "0.0.1"),
+        //.package(url: "https://github.com/vapor/postgres-kit.git", from: "2.0.0")
+        .package(url: "https://github.com/apple/swift-numerics", from: "0.0.5"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .target(
             name: "SymbolLab",
-            dependencies: ["SymEngine"]),
+            dependencies: [
+                .product(name: "RealModule", package: "swift-numerics"),
+                .product(name: "SymEngine", package: "SymEngine.swift"),
+//                "SymEngine"
+        ]),
         .target(
             name: "SymbolTest",
             dependencies: ["SymbolLab"]),

@@ -6,6 +6,7 @@
 //
 
 import SymEngine
+import RealModule
 
 //######################### Define the protocol #########################
 
@@ -112,6 +113,10 @@ public struct Parentheses: Function {
         guard let argSVG = self.param.svg(using: source) else { return nil }
         return SVGUtilities.parentheses(argSVG, using: source)
     }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return try self.param.evaluate(withValues: values)
+    }
 }
 
 public struct Derivative: Function {
@@ -176,6 +181,10 @@ public struct Derivative: Function {
         #warning("Not implemented yet")
         return nil
     }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "Can't evaluate derivatives")
+    }
 }
 
 public struct Integral: Function {
@@ -229,6 +238,11 @@ public struct Integral: Function {
         #warning("Not implemented yet")
         return nil
     }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        #warning("Maybe just do it numerically")
+        throw SymbolLabError.notApplicable(message: "Can't evaluate integrals")
+    }
 }
 
 public struct Expand: Function {
@@ -269,6 +283,10 @@ public struct Expand: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return try self.argument.evaluate(withValues: values)
+    }
 }
 
 public struct AbsoluteValue: Function {
@@ -307,6 +325,11 @@ public struct AbsoluteValue: Function {
         guard let argSVG = self.argument.svg(using: source) else { return nil }
         let pipe2SVG = pipeSVG
         return SVGUtilities.compose(elements: [pipeSVG, argSVG, pipe2SVG], spacing: SVGOptions.parethesesSpacing, alignment: .center, direction: .horizontal)
+    }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        let val = try self.argument.evaluate(withValues: values)
+        return val > 0 ? val: -1*val
     }
 }
 
@@ -347,6 +370,10 @@ public struct ErrorFunction: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "erf not implemneted yet")
+    }
 }
 
 public struct Sin: Function {
@@ -385,6 +412,10 @@ public struct Sin: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .sin(self.argument.evaluate(withValues: values))
     }
 }
 
@@ -425,6 +456,10 @@ public struct Cos: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .cos(self.argument.evaluate(withValues: values))
+    }
 }
 
 public struct Tan: Function {
@@ -463,6 +498,10 @@ public struct Tan: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .tan(self.argument.evaluate(withValues: values))
     }
 }
 
@@ -503,6 +542,10 @@ public struct Asin: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .asin(self.argument.evaluate(withValues: values))
+    }
 }
 
 public struct Acos: Function {
@@ -541,6 +584,10 @@ public struct Acos: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .acos(self.argument.evaluate(withValues: values))
     }
 }
 
@@ -581,6 +628,10 @@ public struct Atan: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .atan(self.argument.evaluate(withValues: values))
+    }
 }
 
 public struct Csc: Function {
@@ -619,6 +670,10 @@ public struct Csc: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try 1 / .sin(self.argument.evaluate(withValues: values))
     }
 }
 
@@ -659,6 +714,10 @@ public struct Sec: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try 1  / .cos(self.argument.evaluate(withValues: values))
+    }
 }
 
 public struct Cot: Function {
@@ -697,6 +756,10 @@ public struct Cot: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try 1 / .tan(self.argument.evaluate(withValues: values))
     }
 }
 
@@ -737,6 +800,10 @@ public struct Acsc: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .asin(1 / self.argument.evaluate(withValues: values))
+    }
 }
 
 public struct Asec: Function {
@@ -775,6 +842,10 @@ public struct Asec: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .acos(1 / self.argument.evaluate(withValues: values))
     }
 }
 
@@ -815,6 +886,10 @@ public struct Acot: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "arccotan is too hard. me done.")
+    }
 }
 
 public struct Sinh: Function {
@@ -853,6 +928,10 @@ public struct Sinh: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .sinh(self.argument.evaluate(withValues: values))
     }
 }
 
@@ -893,6 +972,10 @@ public struct Cosh: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .cosh(self.argument.evaluate(withValues: values))
+    }
 }
 
 public struct Tanh: Function {
@@ -931,6 +1014,10 @@ public struct Tanh: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .tanh(self.argument.evaluate(withValues: values))
     }
 }
 
@@ -971,6 +1058,10 @@ public struct Asinh: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .asinh(self.argument.evaluate(withValues: values))
+    }
 }
 
 public struct Acosh: Function {
@@ -1009,6 +1100,10 @@ public struct Acosh: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .acosh(self.argument.evaluate(withValues: values))
     }
 }
 
@@ -1049,6 +1144,10 @@ public struct Atanh: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .atanh(self.argument.evaluate(withValues: values))
+    }
 }
 
 public struct Csch: Function {
@@ -1087,6 +1186,10 @@ public struct Csch: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "IDK acsch")
     }
 }
 
@@ -1127,6 +1230,10 @@ public struct Sech: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "IDK asech")
+    }
 }
 
 public struct Coth: Function {
@@ -1165,6 +1272,10 @@ public struct Coth: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "IDK acot")
     }
 }
 
@@ -1205,6 +1316,10 @@ public struct Acsch: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "IDK acsch")
+    }
 }
 
 public struct Asech: Function {
@@ -1244,6 +1359,10 @@ public struct Asech: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "IDK asech")
+    }
 }
 
 public struct Acoth: Function {
@@ -1282,6 +1401,10 @@ public struct Acoth: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "IDK acoth")
     }
 }
 
@@ -1323,6 +1446,10 @@ public struct Sqrt: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .sqrt(self.argument.evaluate(withValues: values))
+    }
 }
 
 public struct Exp: Function {
@@ -1363,6 +1490,10 @@ public struct Exp: Function {
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try  .exp(self.argument.evaluate(withValues: values))
+    }
 }
 
 public struct Log: Function {
@@ -1401,5 +1532,9 @@ public struct Log: Function {
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        return try .log(self.argument.evaluate(withValues: values))
     }
 }

@@ -15,6 +15,7 @@ public protocol Node: CustomStringConvertible {
     
     func generate(withOptions options: GeneratorOptions, depths: Depths) -> Node
     func svg(using source: SVGSource) -> SVGElement?
+    func evaluate(withValues values: [String: Double]) throws -> Double
 }
 
 extension Node {
@@ -69,6 +70,10 @@ public struct Number: Node {
     public func svg(using source: SVGSource) -> SVGElement? {
         return SVGUtilities.svg(of: self.description, using: source)
     }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return Double(self.value)
+    }
 }
 
 public struct Variable: Node {
@@ -101,5 +106,12 @@ public struct Variable: Node {
     
     public func svg(using source: SVGSource) -> SVGElement? {
         return SVGUtilities.svg(of: self.string, using: source)
+    }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        guard !values.keys.contains(self.string) else {
+            throw SymbolLabError.noValue(forVariable: self.string)
+        }
+        return values[self.string]!
     }
 }

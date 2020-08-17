@@ -6,6 +6,7 @@
 //
 
 import SymEngine
+import Foundation
 
 //############################ Protocol and Precendence Definitions ##################
 
@@ -74,6 +75,9 @@ public struct Op: Operation {
     }
     public func svg(using source: SVGSource) -> SVGElement? {
         return nil
+    }
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "shouldn't be used function in Op")
     }
 }
 
@@ -144,6 +148,10 @@ public struct Assign: Operation {
         guard let opSVG = opSVGOpt else { return nil }
         return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
     }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        throw SymbolLabError.notApplicable(message: "evaluate isn't applicable to assignment")
+    }
 }
 
 /**
@@ -205,6 +213,10 @@ public struct Negative: Operation {
         guard let argSVG = argSVGOpt else { return nil }
         guard let opSVG = opSVGOpt else { return nil }
         return SVGUtilities.compose(elements: [opSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+    }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return try -1*self.argument.evaluate(withValues: values)
     }
 }
 
@@ -288,6 +300,16 @@ public struct Decimal: Operation {
         guard let leftSVG = leftSVGOpt else { return nil }
         guard let opSVG = opSVGOpt else { return nil }
         return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+    }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        guard let leftNumber = self.left as? Number else {
+            throw SymbolLabError.notApplicable(message: "Non number in decimal op")
+        }
+        guard let rightNumber = self.right as? Number else {
+            throw SymbolLabError.notApplicable(message: "Non number in decimal op")
+        }
+        return Double("\(leftNumber).\(rightNumber)")!
     }
 }
 
@@ -393,6 +415,10 @@ public struct Add: Operation {
         }
         
         return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
+    }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return try self.left.evaluate(withValues: values) + self.right.evaluate(withValues: values)
     }
 }
 
@@ -502,6 +528,10 @@ public struct Subtract: Operation {
         
         return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
     }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return try  self.left.evaluate(withValues: values) - self.right.evaluate(withValues: values)
+    }
 }
 
 /**
@@ -607,6 +637,10 @@ public struct Multiply: Operation {
         
         return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
     }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return try self.left.evaluate(withValues: values) * self.right.evaluate(withValues: values)
+    }
 }
 
 /**
@@ -689,6 +723,10 @@ public struct Divide: Operation {
         barSVG.resize(width: max(rightBB.width, leftBB.width), height: SVGOptions.fractionBarThickness)
         
         return SVGUtilities.compose(elements: [leftSVG, barSVG, rightSVG], spacing: SVGOptions.fractionSpacing, alignment: .center, direction: .vertical)
+    }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return try self.left.evaluate(withValues: values) / self.right.evaluate(withValues: values)
     }
 }
 
@@ -785,6 +823,10 @@ public struct Power: Operation {
         svg.minimizeSVG()
         return svg
     }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return try pow(self.left.evaluate(withValues: values), self.right.evaluate(withValues: values))
+    }
 }
 
 /**
@@ -863,6 +905,11 @@ public struct Factorial: Operation {
         }
         
         return SVGUtilities.compose(elements: [argSVG, opSVG], spacing: SVGOptions.parethesesSpacing, alignment: .end, direction: .horizontal)
+    }
+    
+    public func evaluate(withValues values: [String : Double]) throws -> Double {
+        #warning("Not implemented")
+        throw SymbolLabError.notApplicable(message: "Factorial not implemented for the moment")
     }
 }
 

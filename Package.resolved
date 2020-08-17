@@ -2,8 +2,17 @@
   "object": {
     "pins": [
       {
+        "package": "swift-numerics",
+        "repositoryURL": "https://github.com/apple/swift-numerics",
+        "state": {
+          "branch": null,
+          "revision": "110beefe0b9a4af05b09f2d33faf52740d9229a7",
+          "version": "0.0.6"
+        }
+      },
+      {
         "package": "SymEngine",
-        "repositoryURL": "/Users/ianruh/Dev/SymEngine",
+        "repositoryURL": "https://github.com/ianruh/SymEngine.swift",
         "state": {
           "branch": null,
           "revision": "c5242df2a279dd692ee23b3c2aaa181b161e592c",
