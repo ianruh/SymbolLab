@@ -2,6 +2,33 @@
   "object": {
     "pins": [
       {
+        "package": "LASwift",
+        "repositoryURL": "https://github.com/ianruh/LASwift.git",
+        "state": {
+          "branch": "linsolve",
+          "revision": "8c729378eb15e0ebaf80861317d23656c1233765",
+          "version": null
+        }
+      },
+      {
+        "package": "Nimble",
+        "repositoryURL": "https://github.com/Quick/Nimble.git",
+        "state": {
+          "branch": null,
+          "revision": "2b1809051b4a65c1d7f5233331daa24572cd7fca",
+          "version": "8.1.1"
+        }
+      },
+      {
+        "package": "Quick",
+        "repositoryURL": "https://github.com/Quick/Quick.git",
+        "state": {
+          "branch": null,
+          "revision": "09b3becb37cb2163919a3842a4c5fa6ec7130792",
+          "version": "2.2.1"
+        }
+      },
+      {
         "package": "swift-numerics",
         "repositoryURL": "https://github.com/apple/swift-numerics",
         "state": {
@@ -12,11 +39,11 @@
       },
       {
         "package": "SymEngine",
-        "repositoryURL": "https://github.com/ianruh/SymEngine.swift",
+        "repositoryURL": "/Users/ianruh/Dev/SymEngine",
         "state": {
           "branch": null,
-          "revision": "c5242df2a279dd692ee23b3c2aaa181b161e592c",
-          "version": "0.0.1"
+          "revision": "3e108c06c877ba5d1c546cc297d4ea7195425faf",
+          "version": "0.0.2"
         }
       }
     ]

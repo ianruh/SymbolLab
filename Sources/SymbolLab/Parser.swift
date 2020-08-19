@@ -22,14 +22,6 @@ public struct Token: CustomStringConvertible {
     var node: Node?
 }
 
-public struct Debug: CustomStringConvertible {
-    let msg: String
-    
-    public var description: String {
-        self.msg
-    }
-}
-
 public struct Parser {
     
     public static let allOperations: [Operation] = [Assign([P,P]),
@@ -74,7 +66,7 @@ public struct Parser {
                                                     Sqrt([P]),
                                                     Exp([P]),
                                                     Log([P])]
-    
+
     private var debug: (String) -> ()
     private var operations: [Operation]
     private var groups: [[Operation]]

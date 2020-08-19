@@ -158,7 +158,7 @@ public struct Assign: Operation {
 A negative number
 */
 public struct Negative: Operation {
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Parentheses([P,P]).precedence)
+    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Multiply([P,P]).precedence)
     public let type: OperationType = .prefix
     public let associativity: OperationAssociativity = .none
     public let identifier: String = "-"
@@ -167,10 +167,11 @@ public struct Negative: Operation {
     public var argument: Node
     
     public var description: String {
-        guard self.argument.isBasic || self.argument as? Decimal != nil else {
-            print("Missused negative operation : '-\(self.argument)'")
-            return ""
-        }
+        // MAYBE?
+//        guard self.argument.isBasic || self.argument as? Decimal != nil else {
+//            print("Missused negative operation : '-\(self.argument)'")
+//            return ""
+//        }
         return "-\(self.argument)"
     }
     
@@ -179,10 +180,11 @@ public struct Negative: Operation {
     }
     
     public var latex: String {
-        guard self.argument.isBasic || self.argument as? Decimal != nil else {
-            print("Missused negative operation : '-\(self.argument)'")
-            return ""
-        }
+        // MAYBE?
+//        guard self.argument.isBasic || self.argument as? Decimal != nil else {
+//            print("Missused negative operation : '-\(self.argument)'")
+//            return ""
+//        }
         return "-\(self.argument.latex)"
     }
     
@@ -204,10 +206,11 @@ public struct Negative: Operation {
     }
     
     public func svg(using source: SVGSource) -> SVGElement? {
-        guard self.argument.isBasic || self.argument as? Decimal != nil else {
-            print("Missused negative operation : '-\(self.argument)'")
-            return nil
-        }
+        // MAYBE?
+//        guard self.argument.isBasic || self.argument as? Decimal != nil else {
+//            print("Missused negative operation : '-\(self.argument)'")
+//            return nil
+//        }
         let argSVGOpt = self.argument.svg(using: source)
         let opSVGOpt = source.getSymbol(self.identifier)
         guard let argSVG = argSVGOpt else { return nil }
@@ -735,7 +738,7 @@ Power of one node to the other.
 */
 public struct Power: Operation {
     
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Multiply([P,P]).precedence)
+    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Negative([P,P]).precedence)
     public let type: OperationType = .infix
     public let associativity: OperationAssociativity = .right
     public let identifier: String = "^"

@@ -204,9 +204,11 @@ final class ParserTests: XCTestCase {
     
     func testSpecificCases() {
         testGoodString("asech(d(64,x)-z!)")
-        testGoodString("acosh(log((8.8+((445!)!)!)^-357))")
-        testGoodString("acosh(int(83-(38!-866/8)^334.30+1.787,(-85+(545*26)^-2/(2+w)^(0+547))*(d-13+51+y),3.50,886))")
+        testGoodString("acosh(log((8.8+((445!)!)!)^(-357)))")
+        testGoodString("acosh(int(83-(38!-866/8)^334.30+1.787,(-85+(545*26)^(-2)/(2+w)^(0+547))*(d-13+51+y),3.50,886))")
         testGoodString("(133-(w!-b)^(73-a))*446.623/(4.577-541)*-350")
+        testGoodString("-sin(2)")
+//        testGoodString("-sin(y)/a^17")
     }
 
     static var allTests = [

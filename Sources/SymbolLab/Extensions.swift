@@ -6,7 +6,9 @@
 //
 // Extensions of types not defined in this repo
 
-import Foundation
+import SymEngine
+import LASwift
+import RealModule
 
 extension String {
     var isInteger: Bool {
@@ -106,4 +108,55 @@ extension Double {
     public var sixAc: String {
         return String(format: "%0.6f", self)
     }
+}
+
+extension Collection where Element: Collection {
+    public var pprint: String {
+        var str: String = ""
+        for row in self {
+            str += "["
+            for el in row {
+                str += "\(el),  "
+            }
+            str += "]\n"
+        }
+        return str
+    }
+}
+
+extension SymEngine.Symbol {
+    /**
+    Make some changes to the string is a dialect I like here
+
+    Changes:
+
+    - Change '**' for power to '^'
+    - Change leading '-' to '-1*'
+    */
+    public var symbolLabString: String {
+        var desc = self.description
+        desc = desc.replacingOccurrences(of: "**", with: "^")
+        if(desc.first == "-") {
+            desc.remove(at: desc.startIndex)
+            desc = "-1*\(desc)"
+        }
+        return desc
+    }
+}
+
+/**
+Not quite an extension, but close enough
+*/
+public func norm(_ vec: Vector, _ val: Int = 2) -> Double {
+    var sum = 0.0
+    vec.forEach({sum += .pow($0, 2)})
+    return .root(sum, val)
+}
+
+public func * (_ lhs: Double, _ rhs: Vector) -> Vector {
+    var vec: Vector = []
+    for i in 0..<rhs.count {
+        vec.append(lhs*rhs[i])
+    }
+    return vec
 }

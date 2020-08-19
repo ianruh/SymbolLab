@@ -9,14 +9,45 @@ import Foundation
 import SymbolLab
 
 let parser = Parser()
-let nodeOpt: Node? = parser.parse(cString: "1+2-x/3 + 24^2 - 1/sin(x^(2-x))")
-let system: System = [
-    parser.parse(cString: "x+y+z")!,
-    parser.parse(cString: "x+2")!,
-    parser.parse(cString: "z^2-1")!
+var genOptions = GeneratorOptions()
+genOptions.maxDepth = 3
+genOptions.operations.assignments.maxChain = 0
+
+genOptions.operations.list = [
+    Decimal([P,P]),
+    Negative([P]),
+    Add([P,P]),
+    Subtract([P,P]),
+    Multiply([P,P]),
+    Divide([P,P]),
+    Power([P,P]),
+    Parentheses([P]),
+    Sin([P]),
+    Cos([P]),
+    Tan([P]),
+//    Asin([P]),
+//    Acos([P]),
+//    Atan([P]),
 ]
 
-system.solve()
+let system: System = [
+    parser.parse(cString: "x+y+z")!,
+    parser.parse(cString: "x+2/sin(z)")!,
+    parser.parse(cString: "z-1")!
+]
+//let system: System = [
+//    GeneratorUtilities.randomNode(&genOptions),
+//    GeneratorUtilities.randomNode(&genOptions),
+//    GeneratorUtilities.randomNode(&genOptions),
+//    GeneratorUtilities.randomNode(&genOptions),
+//    GeneratorUtilities.randomNode(&genOptions),
+//    GeneratorUtilities.randomNode(&genOptions),
+////    parser.parse(cString: "cos(sin(b)^358-cos(53-a))")!
+//]
+print(system)
+
+//try print(system.solve(guess: ["z": 1.5, "x": -2.5, "y": 1.5], maxIterations: 100))
+try print(system.solve())
 
 func writeSVG() throws {
     let parser = Parser()

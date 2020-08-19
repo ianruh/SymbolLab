@@ -109,7 +109,7 @@ public struct Variable: Node {
     }
     
     public func evaluate(withValues values: [String : Double]) throws -> Double {
-        guard !values.keys.contains(self.string) else {
+        guard values.keys.contains(self.string) else {
             throw SymbolLabError.noValue(forVariable: self.string)
         }
         return values[self.string]!

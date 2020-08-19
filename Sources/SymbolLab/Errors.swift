@@ -11,4 +11,6 @@ Errors that can be thrown by SymEngine
 public enum SymbolLabError: Error {
     case noValue(forVariable: String)
     case notApplicable(message: String)
+    case noVariable(forValue: String)
+    case misc(_ message: String)
 }
