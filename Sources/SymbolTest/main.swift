@@ -30,10 +30,20 @@ genOptions.operations.list = [
 //    Atan([P]),
 ]
 
+let x = Variable("x")
+let y = Variable("y")
+let z = Variable("z")
+//
+//let system: System = [
+//    x+(1 as Number)
+//
+//]
+
 let system: System = [
-    parser.parse(cString: "x+y+z")!,
-    parser.parse(cString: "x+2/sin(z)")!,
-    parser.parse(cString: "z-1")!
+    parser.parse(cString: "f-10")!,
+    parser.parse(cString: "m-5")!,
+    parser.parse(cString: "f-m*a")!,
+    parser.parse(cString: "x^2+sin(f)-cos(x)/a^7")!,
 ]
 //let system: System = [
 //    GeneratorUtilities.randomNode(&genOptions),
@@ -42,7 +52,7 @@ let system: System = [
 //    GeneratorUtilities.randomNode(&genOptions),
 //    GeneratorUtilities.randomNode(&genOptions),
 //    GeneratorUtilities.randomNode(&genOptions),
-////    parser.parse(cString: "cos(sin(b)^358-cos(53-a))")!
+//    parser.parse(cString: "cos(sin(b)^358-cos(53-a))")!
 //]
 print(system)
 

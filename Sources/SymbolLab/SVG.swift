@@ -7,10 +7,13 @@
 
 import Foundation
 
-/**
- A source of SVG's must have this.
- */
+/// Protocol that defines what an svg source needs
+///
 public protocol SVGSource {
+    /// Get the SVGPath for the given symbol.
+    ///
+    /// - Parameter str: String representation of the symbol. Look at SVGFormalSource for details
+    /// - Returns: An SVGPath for the symbol, if one exists.
     func getSymbol(_ str: String) -> SVGPath?
 }
 
@@ -44,32 +47,42 @@ extension Movable {
     }
 }
 
-/**
- Protocol serves as the main protocol for any SVG element.
- */
+/// Protocol serves as the main protocol for any SVG element.
 public protocol SVGElement: CustomStringConvertible, Resizable, Movable {
+    /// The bounding box of the element (if that is applicable).
     var boundingBox: BoundingBox? {get}
+
+    /// Get labeled bounding boxes.
+    var boundingBoxes: [String: [BoundingBox]] {get}
 }
 
 extension SVGElement {
-    /**
-     Write the svg to disk at the given absolute path.
-     */
+    /// Write the svg to disk at the given absolute path.
+    ///
+    /// - Parameter path: Path to write to disk at.
+    /// - Throws: Throws if it cannot write to the given path.
     public func writeToDisk(path: String) throws {
+        guard let bbox = self.boundingBox else {
+            throw SymbolLabError.misc("Couldn't get bounding box.")
+        }
+        var str = self.description
+        str = """
+              <?xml version="1.0" encoding="UTF-8"?>
+              \(str)
+              """
         let url: URL = URL(fileURLWithPath: path)
-        try self.description.write(to: url, atomically: true, encoding: .utf8)
+        try str.write(to: url, atomically: true, encoding: .utf8)
     }
 }
 
-/**
- Struct encapsulates the values necessary for an SVG viewbox.
- */
+/// Struct encapsulates the values necessary for an SVG viewbox.
 public struct ViewBox: CustomStringConvertible {
-    var xmin: Double
-    var ymin: Double
-    var width: Double
-    var height: Double
-    
+    public var xmin: Double
+    public var ymin: Double
+    public var width: Double
+    public var height: Double
+
+    /// String representation of the view box
     public var description: String {
         return "\(self.xmin.sixAc) \(self.ymin.sixAc) \(self.width.sixAc) \(self.height.sixAc)"
     }
@@ -89,9 +102,7 @@ public struct ViewBox: CustomStringConvertible {
     }
 }
 
-/**
- Utility struct for storing and working with bounding boxes.
- */
+/// Utility struct for storing and working with bounding boxes.
 public struct BoundingBox {
     public var x: Double
     public var y: Double
@@ -124,7 +135,11 @@ public struct BoundingBox {
         self.width = right - left
         self.height = bottom - top
     }
-    
+
+    /// Get the bounding box of a set of bounding boxes.
+    /// 
+    /// - Parameter boxes: Boxes to get the bounding box of.
+    /// - Returns: The overall bounding box
     public static func of(boxes: [BoundingBox?]) -> BoundingBox? {
         var xmin: Double?
         var ymin: Double?
@@ -182,7 +197,25 @@ public class SVG: SVGElement {
      Store all of the elements in the SVG
      */
     var children: [SVGElement]
-    
+
+    public var boundingBoxes: [String: [BoundingBox]] {
+        var bboxes: [String: [BoundingBox]] = [:]
+        for child in self.children {
+            let childBoxes =  child.boundingBoxes
+            for key in childBoxes.keys {
+                if(bboxes.keys.contains(key)) {
+                    // If we already have that key
+                    bboxes[key]!.append(contentsOf: childBoxes[key]!)
+                } else {
+                    // if we don't already have the key
+                    bboxes[key] = childBoxes[key]!
+                }
+            }
+        }
+
+        return bboxes
+    }
+
     // The height and width of the SVG
     public var height: Double
     public var width: Double
@@ -255,7 +288,7 @@ public class SVG: SVGElement {
     public func paste(path: SVGElement, withTopLeftAt tl: Point) {
         var pathVar = path
         pathVar.move(dx: tl.x, dy: tl.y)
-        
+
         switch pathVar {
         case let svg as SVG:
             self.children.append(contentsOf: svg.children)
@@ -473,8 +506,10 @@ struct Z: PathElement {
     mutating func move(dx: Double, dy: Double) {}
 }
 
+/// A path in an SVG
 public struct SVGPath: SVGElement, Resizable {
-    
+
+    public var label: String
     public var fill: String
     public var stroke: String
     public var strokeWidth: Double
@@ -485,7 +520,14 @@ public struct SVGPath: SVGElement, Resizable {
         }
         return str
     }
-    
+
+    public var boundingBoxes: [String: [BoundingBox]] {
+        var bboxes: [String: [BoundingBox]] = [:]
+        bboxes[label] = [self.boundingBox!]
+        return bboxes
+    }
+
+
     var pathElements: [PathElement] = []
     
     /**
@@ -498,20 +540,22 @@ public struct SVGPath: SVGElement, Resizable {
     
     public var description: String {
         return """
-        <path fill="\(self.fill)" stroke="\(self.stroke)" stroke-width="\(self.strokeWidth)rem" d="\(self.d)" />
+        <path fill="\(self.fill)" stroke="\(self.stroke)" stroke-width="\(self.strokeWidth)" d="\(self.d)" data-label="\(self.label)" />
         """
     }
     
-    init(fill: String = "black", stroke: String = "black", strokeWidth: Double = 0, pathElements: [PathElement]) {
+    init(fill: String = "black", stroke: String = "black", strokeWidth: Double = 0, pathElements: [PathElement], label: String) {
         self.fill = fill
         self.stroke = stroke
         self.strokeWidth = strokeWidth
+        self.label = label
     }
     
-    public init?(fill: String = "black", stroke: String = "black", strokeWidth: Double = 0, d: String) {
+    public init?(fill: String = "black", stroke: String = "black", strokeWidth: Double = 0, d: String, label: String) {
         self.fill = fill
         self.stroke = stroke
         self.strokeWidth = strokeWidth
+        self.label = label
         
         // Handle the path
         let parts = d.split{$0 == " "}.map(String.init)

@@ -402,6 +402,10 @@ public struct Sin: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -444,6 +448,10 @@ public struct Cos: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -488,6 +496,10 @@ public struct Tan: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -530,6 +542,10 @@ public struct Asin: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -574,6 +590,10 @@ public struct Acos: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -616,6 +636,10 @@ public struct Atan: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -660,6 +684,10 @@ public struct Csc: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -702,6 +730,10 @@ public struct Sec: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -746,6 +778,10 @@ public struct Cot: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -788,6 +824,10 @@ public struct Acsc: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -832,6 +872,10 @@ public struct Asec: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -874,6 +918,10 @@ public struct Acot: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -918,6 +966,10 @@ public struct Sinh: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -960,6 +1012,10 @@ public struct Cosh: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -1004,6 +1060,10 @@ public struct Tanh: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -1046,6 +1106,10 @@ public struct Asinh: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -1090,6 +1154,10 @@ public struct Acosh: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -1132,6 +1200,10 @@ public struct Atanh: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -1176,6 +1248,10 @@ public struct Csch: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -1218,6 +1294,10 @@ public struct Sech: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -1262,6 +1342,10 @@ public struct Coth: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -1304,6 +1388,10 @@ public struct Acsch: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -1348,6 +1436,10 @@ public struct Asech: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -1391,6 +1483,10 @@ public struct Acoth: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -1433,6 +1529,10 @@ public struct Sqrt: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {
@@ -1478,6 +1578,10 @@ public struct Exp: Function {
     public init(_ params: [Node]) {
         self.argument = params[0]
     }
+
+    public init(_ param: Node) {
+        self.init([param])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
@@ -1521,6 +1625,10 @@ public struct Log: Function {
     
     public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.init([param])
     }
     
     public func factory(_ params: [Node]) -> Node {

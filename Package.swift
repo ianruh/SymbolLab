@@ -12,10 +12,13 @@ let package = Package(
             targets: ["SymbolLab"]),
         .executable(
             name:"symbolTest",
-            targets: ["SymbolTest"])//,
-        // .executable(
-        //     name:"databaseUtility",
-        //     targets: ["DatabaseUtility"])
+            targets: ["SymbolTest"]),
+        .library(
+             name:"databaseUtility",
+             targets: ["DatabaseUtility"]),
+        .executable(
+                name:"generateYoloData",
+                targets: ["GenerateYoloData"]),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -26,7 +29,9 @@ let package = Package(
         .package(
             url: "https://github.com/ianruh/LASwift.git",
             .branch("linsolve")
-        )
+        ),
+        .package(url: "https://github.com/pvieito/PythonKit.git", .branch("master")),
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "0.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -42,8 +47,14 @@ let package = Package(
         .target(
             name: "SymbolTest",
             dependencies: ["SymbolLab"]),
-        //.target(name: "DatabaseUtility",
-        //    dependencies: ["SymbolLab", "PostgresKit"]),
+        .target(
+            name: "DatabaseUtility",
+            dependencies: ["SymbolLab", "PythonKit"]),
+        .target(
+            name: "GenerateYoloData",
+            dependencies: ["SymbolLab",
+                           "DatabaseUtility",
+                           .product(name: "ArgumentParser", package: "swift-argument-parser")]),
         .testTarget(
             name: "SymbolLabTests",
             dependencies: ["SymbolLab"]),

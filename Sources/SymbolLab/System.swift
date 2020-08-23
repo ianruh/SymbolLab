@@ -11,7 +11,8 @@ import LASwift
 
 public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     public typealias ArrayLiteralElement = Node
-    
+
+    /// The set of variables involved in the system's equations
     public var variables: Set<String> {
         var variables: Set<String> = []
         equations.forEach({ eq in
@@ -20,6 +21,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         return variables
     }
 
+    /// The string representation of the system as a column array
     public var description: String {
         var str = "["
         for i in 0..<self.equations.count {
@@ -31,28 +33,42 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         str += "]"
         return str
     }
-    
+
+    /// The ordered sequence of variables used whil solving the system
     public var variableSequence: [String] {
         return self.variables.sorted()
     }
 
+    /// The Jacobian of the system, if one can be constructed
     public var jacobian: Jacobian? {
         return Jacobian(system: self)
     }
-    
+
+    /// The set of equations that constitute the system
     internal var equations: [Node]
-    
+
+    /// Initializer is used when constructing the system
+    ///
+    /// - Parameter arrayLiteral: Array for the system
     public required init(arrayLiteral: ArrayLiteralElement...) {
         self.equations = arrayLiteral
     }
-    
+
+    /// Initializer to construct the system from an array of Nodes
+    ///
+    /// - Parameter array:
     public init(_ array: [Node]) {
         self.equations = array
     }
 
-    /**
-    Solve the system using Newton's method.
-    */
+    /// Solve the system using Newton's method.
+    ///
+    /// - Parameters:
+    ///   - guess: A dictionary of guess values for each of the variables in the system. If non is provided, then all guesses are assumed to be 1.
+    ///   - threshold: The maximum acceptable error threshold. Iteration stops when this, or the maxIterations count is achieved.
+    ///   - maxIterations: The maximum number of iterations to perform before stopping.
+    /// - Returns: A vector of solutions to the system, ordered as is the system's veriableSequence.
+    /// - Throws: An error for many reasons. Look at error message for details.
     public func solve(guess: [String: Double] = [:], threshold: Double = 0.0001, maxIterations: Int = 1000) throws -> Vector {
         guard self.checkNumberOfVariables() else {
             throw SymbolLabError.misc("Unconstrained system")
@@ -95,6 +111,11 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         return x_current
     }
 
+    /// Evaluate the system at the point given by the dictionary of variables and values.
+    ///
+    /// - Parameter values: A dictionary of the value for each variable at the desired point.
+    /// - Returns: The vector (ordered according to the variableSequence) for the value of the system at the point
+    /// - Throws: On a multitude of occasions. Look at the error message for details.
     public func eval(_ values: [String: Double]) throws -> Vector {
         var vec: Vector = []
         for eq in self.equations {
@@ -103,9 +124,11 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         return vec
     }
 
-    /**
-    Assume the values are in order of sequence
-    */
+    /// Evaluate the system at the given point.
+    ///
+    /// - Parameter vec: Values (assumed to be in order of variableSequence) to evaluate  at.
+    /// - Returns: The vector for the value of the system at the point
+    /// - Throws: On a multitude of occasions. Look at the error message for details
     public func eval(_ vec: Vector) throws -> Vector {
         var map = [String: Double]()
         guard vec.count == self.variables.count else {
@@ -117,9 +140,9 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         return try self.eval(map)
     }
     
-    /**
-    Check whether there are the same number of variables as equations.
-     */
+    /// Check whether there are the same number of variables as equations.
+    ///
+    /// - Returns: True if same, false otherwise
     public func checkNumberOfVariables() -> Bool {
         return self.variables.count == equations.count
     }

@@ -19,29 +19,75 @@ public protocol Node: CustomStringConvertible {
 }
 
 extension Node {
-    /**
-     Determine if the node is basic
-     */
+    /// Determine if the node is basic
     public var isBasic: Bool {
         return self as? Number != nil || self as? Variable != nil
     }
     
-    /**
-    Determine if the node is an operation
-    */
+    /// Determine if the node is an operation
     public var isOperation: Bool {
         return self as? Operation != nil
     }
     
-    /**
-     Determine is the node is a function
-     */
+    /// Determine is the node is a function
     public var isFunction: Bool {
         return self as? Function != nil
     }
+
+    /// Add operator for nodes
+    ///
+    /// - Parameters:
+    ///   - lhs: Left side of infix operation
+    ///   - rhs: Right side of infix operation
+    /// - Returns: New node adding the two
+    public static func +(_ lhs: Node, _ rhs: Node) -> Node {
+        return Add([lhs, rhs])
+    }
+
+    /// Subtract operator for nodes
+    ///
+    /// - Parameters:
+    ///   - lhs:
+    ///   - rhs:
+    /// - Returns:
+    public static func -(_ lhs: Node, _ rhs: Node) -> Node {
+        return Subtract([lhs, rhs])
+    }
+
+    /// Divide operator for nodes
+    ///
+    /// - Parameters:
+    ///   - lhs:
+    ///   - rhs:
+    /// - Returns:
+    public static func /(_ lhs: Node, _ rhs: Node) -> Node {
+        return Divide([lhs, rhs])
+    }
+
+    /// Multiply operator for nodes
+    ///
+    /// - Parameters:
+    ///   - lhs:
+    ///   - rhs:
+    /// - Returns:
+    public static func *(_ lhs: Node, _ rhs: Node) -> Node {
+        return Multiply([lhs, rhs])
+    }
+
+    /// Take the lhs to the power of the rhs
+    ///
+    /// - Parameters:
+    ///   - lhs:
+    ///   - rhs:
+    /// - Returns:
+    public static func **(_ lhs: Node, _ rhs: Node) -> Node {
+        return Power([lhs, rhs])
+    }
 }
 
-public struct Number: Node {
+public struct Number: Node, ExpressibleByIntegerLiteral {
+    public typealias IntegerLiteralType = Int
+
     public var value: Int
     
     public var description: String {
@@ -60,6 +106,10 @@ public struct Number: Node {
     
     public init(_ num: Int) {
         self.value = num
+    }
+
+    public init(integerLiteral value: Int) {
+        self.init(value)
     }
     
     public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {

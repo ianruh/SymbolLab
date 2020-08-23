@@ -10,7 +10,11 @@ import SymEngine
 
 public struct SymEngineStruct: SymbolicMathEngine {
     public typealias SymbolType = Symbol
-    
+
+    public var node: Node {
+        return Variable("x")
+    }
+
     public func new(_ real: Int, _ complex: Int) -> Symbol? {
         return Symbol(real, i: complex)
     }

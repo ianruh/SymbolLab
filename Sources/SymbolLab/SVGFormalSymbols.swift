@@ -78,7 +78,7 @@ public struct SVGFormalSymbols: SVGSource {
     
     public func getSymbol(_ str: String) -> SVGPath? {
         if let path = SVGFormalSymbols.source[str] {
-            guard var path = SVGPath(d: path) else { return nil }
+            guard var path = SVGPath(d: path, label: str) else { return nil }
             path.scale(by: Self.scaleFactor)
             path.minimizePath()
             return path

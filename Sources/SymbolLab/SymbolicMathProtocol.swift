@@ -7,6 +7,9 @@
 
 public protocol SymbolicMathEngine  {
     associatedtype SymbolType
+
+    // Construct node
+    var node: Node {get}
     
     // Factories
     func new(_ real: Int, _ complex: Int) -> SymbolType?
