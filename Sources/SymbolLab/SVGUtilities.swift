@@ -41,9 +41,14 @@ public struct SVGUtilities {
      */
     public enum Direction { case vertical, horizontal }
     
-    /**
-     Compose two or more svg's with the given alignment and direction
-     */
+    /// Compose two or more svg's with the given alignment and direction
+    ///
+    /// - Parameters:
+    ///   - elements: The elements to compose.
+    ///   - spacing: Spacing to use between elements.
+    ///   - alignment: How to align the elements while composing them.
+    ///   - direction: What direction to compose the elements in.
+    /// - Returns:  An svg composed of the elements as specified.
     public static func compose(elements: [SVGElement], spacing: Double, alignment: Alignment = .end, direction: Direction = .horizontal) -> SVGElement {
         if(elements.count == 1) {
             let svgTemp = SVG(children: [elements[0]])

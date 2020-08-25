@@ -7,6 +7,8 @@
 
 import Foundation
 import SymbolLab
+import SwiftPlot
+import SVGRenderer
 
 let parser = Parser()
 var genOptions = GeneratorOptions()
@@ -25,53 +27,34 @@ genOptions.operations.list = [
     Sin([P]),
     Cos([P]),
     Tan([P]),
-//    Asin([P]),
-//    Acos([P]),
-//    Atan([P]),
+    Derivative([P,P]),
+    Log([P]),
 ]
 
-let x = Variable("x")
-let y = Variable("y")
-let z = Variable("z")
-//
-//let system: System = [
-//    x+(1 as Number)
-//
-//]
-
+// Define the system
 let system: System = [
-    parser.parse(cString: "f-10")!,
-    parser.parse(cString: "m-5")!,
-    parser.parse(cString: "f-m*a")!,
-    parser.parse(cString: "x^2+sin(f)-cos(x)/a^7")!,
+    parser.parse(cString: "ve-2000")!, // m/s
+    parser.parse(cString: "mf-5000")!, // kg
+    parser.parse(cString: "deltaV-ve*log(mz/mf)")!,
+    parser.parse(cString: "mr-(mz/mf)")!,
 ]
-//let system: System = [
-//    GeneratorUtilities.randomNode(&genOptions),
-//    GeneratorUtilities.randomNode(&genOptions),
-//    GeneratorUtilities.randomNode(&genOptions),
-//    GeneratorUtilities.randomNode(&genOptions),
-//    GeneratorUtilities.randomNode(&genOptions),
-//    GeneratorUtilities.randomNode(&genOptions),
-//    parser.parse(cString: "cos(sin(b)^358-cos(53-a))")!
-//]
 print(system)
 
-//try print(system.solve(guess: ["z": 1.5, "x": -2.5, "y": 1.5], maxIterations: 100))
-try print(system.solve())
+let mzVals = Array(stride(from: 5000, through: 90000.0, by: 100))
 
-func writeSVG() throws {
-    let parser = Parser()
-    let nodeOpt: Node? = parser.parse(cString: "1+2-x/3 + 24^2 - 1/sin(x^(2-x))")
+do {
+    let (values, errors, iterations) = try system.solve(at: ["mz": mzVals])
+    let deltaVVals = values.map({$0["deltaV"]!})
 
-    guard let node = nodeOpt else {
-        print("Couldn't parse string")
-        exit(1)
-    }
-
-    let svgOpt = node.svg(using: SVGFormalSymbols())
-    guard let svg = svgOpt else {
-        print("Failed to get SVG")
-        exit(1)
-    }
-    try svg.writeToDisk(path: "/Users/ianruh/Downloads/img.svg")
+    var svg_renderer: SVGRenderer = SVGRenderer()
+    var lineGraph = LineGraph<Double,Double>(enablePrimaryAxisGrid: true)
+    lineGraph.addSeries(mzVals, deltaVVals, label: "X Value", color: .lightBlue)
+    lineGraph.plotTitle.title = "Initial Mass vs. DeltaV"
+    lineGraph.plotLabel.xLabel = "Initial Mass (kg)"
+    lineGraph.plotLabel.yLabel = "Delta V (m/s)"
+    lineGraph.plotLineThickness = 3.0
+    try lineGraph.drawGraphAndOutput(fileName: "/Users/ianruh/Downloads/graph", renderer: svg_renderer)
+} catch {
+    print(error)
+    exit(1)
 }

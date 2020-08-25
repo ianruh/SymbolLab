@@ -160,3 +160,11 @@ public func * (_ lhs: Double, _ rhs: Vector) -> Vector {
     }
     return vec
 }
+
+public func + (_ lhs: Double, _ rhs: Vector) -> Vector {
+    var vec: Vector = []
+    for i in 0..<rhs.count {
+        vec.append(lhs+rhs[i])
+    }
+    return vec
+}

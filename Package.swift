@@ -25,13 +25,14 @@ let package = Package(
         .package(url: "../../SymEngine", from: "0.0.0"),
 //        .package(url: "https://github.com/ianruh/SymEngine.swift", from: "0.0.2"),
         //.package(url: "https://github.com/vapor/postgres-kit.git", from: "2.0.0")
-        .package(url: "https://github.com/apple/swift-numerics", from: "0.0.5"),
+        .package(url: "https://github.com/apple/swift-numerics", .exact("0.0.6")),
         .package(
             url: "https://github.com/ianruh/LASwift.git",
             .branch("linsolve")
         ),
         .package(url: "https://github.com/pvieito/PythonKit.git", .branch("master")),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "0.0.0"),
+        .package(url: "https://github.com/KarthikRIyer/swiftplot.git", from: "2.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -46,7 +47,9 @@ let package = Package(
         ]),
         .target(
             name: "SymbolTest",
-            dependencies: ["SymbolLab"]),
+            dependencies: ["SymbolLab",
+                           .product(name: "SwiftPlot", package: "swiftplot"),
+                           .product(name: "SVGRenderer", package: "swiftplot")]),
         .target(
             name: "DatabaseUtility",
             dependencies: ["SymbolLab", "PythonKit"]),

@@ -181,9 +181,50 @@ public struct Derivative: Function {
         #warning("Not implemented yet")
         return nil
     }
-    
+
+    /// Attempt to evaluate symbolically, fall back on numerically, then fail. Prints an err message in debug mode if symolic evalutaion fails.
+    ///
+    /// The numerical evaluation does middle center difference, with h=sqrt(epsilon)*x.
+    ///
+    /// Wikipedia: For the numerical derivative formula evaluated at x and x + h, a choice for h that is small without producing a large rounding error is ε x {\displaystyle {\sqrt {\varepsilon }}x} {\displaystyle {\sqrt {\varepsilon }}x}
+    ///
+    /// - Parameter values: The values to evaluate at.
+    /// - Returns: The value the node evaluates to at the given points.
+    /// - Throws: If evaluation fails for some reason.
     public func evaluate(withValues values: [String : Double]) throws -> Double {
-        throw SymbolLabError.notApplicable(message: "Can't evaluate derivatives")
+        // Try symbolically
+        do {
+            guard let derSymbol = self.symbol else {
+                throw SymbolLabError.misc("Couldn't get derivative symbol for '\(self.description)'")
+            }
+            guard let derNode = Parser().parse(cString: derSymbol.symbolLabString) else {
+                throw SymbolLabError.misc("Couldn't get derivative node for '\(derSymbol.description)'")
+            }
+
+            return try derNode.evaluate(withValues: values)
+        } catch {
+            #if DEBUG
+            print("""
+                  Could not evaluate derivative symbolically because:
+                  \(error)
+                  """)
+            #endif
+        }
+        // Try numerically
+        guard let variable = self.withRespectTo as? Variable else {
+            // TODO: Numerical derivatives with respect to non-variables (aka other functions)
+            throw SymbolLabError.misc("Derivatives with respect to non-variables hasn't been implemented yet.")
+        }
+        // assume machine precision ~ 2^-52
+        let sqrtEpsilon = 0.000000014899
+        let variableVal = try variable.evaluate(withValues: values)
+        let h = variableVal*sqrtEpsilon
+        var x_back = values
+        x_back[variable.description]! -= h
+        var x_forward = values
+        x_forward[variable.description]! += h
+
+        return try (self.diffOf.evaluate(withValues: x_forward) - self.diffOf.evaluate(withValues: x_back)) / (2*h)
     }
 }
 
@@ -281,7 +322,7 @@ public struct Expand: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
     
     public func evaluate(withValues values: [String : Double]) throws -> Double {
@@ -368,7 +409,7 @@ public struct ErrorFunction: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -415,7 +456,7 @@ public struct Sin: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -462,7 +503,7 @@ public struct Cos: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -509,7 +550,7 @@ public struct Tan: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -556,7 +597,7 @@ public struct Asin: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -603,7 +644,7 @@ public struct Acos: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -650,7 +691,7 @@ public struct Atan: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -697,7 +738,7 @@ public struct Csc: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -744,7 +785,7 @@ public struct Sec: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -791,7 +832,7 @@ public struct Cot: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -838,7 +879,7 @@ public struct Acsc: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -885,7 +926,7 @@ public struct Asec: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -932,7 +973,7 @@ public struct Acot: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -979,7 +1020,7 @@ public struct Sinh: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1026,7 +1067,7 @@ public struct Cosh: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1073,7 +1114,7 @@ public struct Tanh: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1120,7 +1161,7 @@ public struct Asinh: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1167,7 +1208,7 @@ public struct Acosh: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1214,7 +1255,7 @@ public struct Atanh: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1261,7 +1302,7 @@ public struct Csch: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1308,7 +1349,7 @@ public struct Sech: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1355,7 +1396,7 @@ public struct Coth: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1402,7 +1443,7 @@ public struct Acsch: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1449,7 +1490,7 @@ public struct Asech: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1496,7 +1537,7 @@ public struct Acoth: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1544,7 +1585,7 @@ public struct Sqrt: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1592,7 +1633,7 @@ public struct Exp: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {
@@ -1639,7 +1680,7 @@ public struct Log: Function {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
+        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
     public func evaluate(withValues values: [String: Double]) throws -> Double {

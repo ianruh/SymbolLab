@@ -70,11 +70,11 @@ import SymbolLab
 //
 //Generate.main()
 
-let sampleCount =  200
-let treeDepth =  4
+let sampleCount =  400
+let treeDepth =  5
 
 var genOptions = GeneratorOptions()
-genOptions.maxDepth = 3
+genOptions.maxDepth = treeDepth
 genOptions.operations.assignments.maxChain = 0
 genOptions.operations.list = [
     Decimal([P,P]),
@@ -88,20 +88,18 @@ genOptions.operations.list = [
     Sin([P]),
     Cos([P]),
     Tan([P]),
+    AbsoluteValue([P])
 ]
 
 var nodes: [Node] = []
-for i in 0..<sampleCount {
+for _ in 0..<sampleCount {
     nodes.append(GeneratorUtilities.randomNode(&genOptions))
 }
 
 let svgSource = SVGFormalSymbols()
 
-var tokenMap: [String: Int] = [:]
 do {
-    tokenMap = try KerasYOLOWriter.write(nodes: nodes, labelFile: "scratch/labels.txt", svgDirectory: "scratch/svgs", jpgDirectory: "scratch/jpgs", usingSVGSource: svgSource, size: 224)
+    try KerasYOLOWriter.write(nodes: nodes, labelFile: "scratch/labels.txt", classesFile: "scratch/classes.txt", svgDirectory: "scratch/svgs", jpgDirectory: "scratch/jpgs", usingSVGSource: svgSource, size: 224)
 } catch {
     print("Unexpected error: \(error).")
 }
-
-print("Token Map:\n\(tokenMap)")

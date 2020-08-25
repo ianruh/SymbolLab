@@ -12,6 +12,9 @@ import LASwift
 public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     public typealias ArrayLiteralElement = Node
 
+    // Utility used in some solve functions
+    private static let parser: Parser = Parser()
+
     /// The set of variables involved in the system's equations
     public var variables: Set<String> {
         var variables: Set<String> = []
@@ -69,9 +72,9 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     ///   - maxIterations: The maximum number of iterations to perform before stopping.
     /// - Returns: A vector of solutions to the system, ordered as is the system's veriableSequence.
     /// - Throws: An error for many reasons. Look at error message for details.
-    public func solve(guess: [String: Double] = [:], threshold: Double = 0.0001, maxIterations: Int = 1000) throws -> Vector {
-        guard self.checkNumberOfVariables() else {
-            throw SymbolLabError.misc("Unconstrained system")
+    public func solve(guess: [String: Double] = [:], threshold: Double = 0.0001, maxIterations: Int = 1000) throws -> (values: [String: Double], error: Double, iterations: Int) {
+        guard self.variables.count == self.equations.count else {
+            throw SymbolLabError.misc("Unconstrained system.")
         }
         // Get the jacobian of the system
         guard let jacobian = self.jacobian else {
@@ -95,20 +98,157 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
 
         // Iterate
         var count = 0
-        var err = norm(LASwift.abs(x_current-zero_vec), 2)
+        var err = try norm(LASwift.abs(self.eval(x_current)-zero_vec), 2)
+        var shifted: Int = 0 // Whether or not we have shifted out of a singularity yet
         while(count < maxIterations && err > threshold) {
             var f = try self.eval(x_current)
             f = -1.0*f
             let J = try jacobian.eval(x_current)
-            let y = linsolve(J, Matrix(f)).flat // flat to get raw vector
+            var y: [Double] = []
+            // Try to solve the system
+            do {
+                y = try linsolve(J, Matrix(f)).flat // flat to get raw vector
+            } catch {
+                if(shifted < 3) {
+                    for i in 0..<x_current.count {
+                        // Alleviate the illconditioning by adding some noise
+                        x_current[i] += Double.random(in: -0.2...0.2)
+                    }
+                    shifted += 1
+                    count += 1
+                    continue
+                } else {
+                    throw SymbolLabError.misc("System seems to be illconditioned somehow.")
+                }
+            }
             x_current = x_current + y
 
             // Increment metrics
-            err = norm(LASwift.abs(x_current-zero_vec), 2)
+            err = try norm(LASwift.abs(self.eval(x_current)-zero_vec), 2)
             count += 1
         }
 
-        return x_current
+        var retVal: [String: Double] = [:]
+        for i in 0..<self.variableSequence.count {
+            retVal[self.variableSequence[i]] = x_current[i]
+        }
+        return (retVal, err, count)
+    }
+
+    /// Solve the system over a range of values. Currently, only support a range for one value, but that is mostly just
+    /// because the graphing library only has 2d support at the moment.
+    ///
+    ///
+    /// - Parameters:
+    ///   - overRange: A dictionary with the variable to vary associated with the desired range. e.g. `["x": 0.0..<10.0]`
+    ///   - initialGuess: A set of initial guesses for the other variables at the beginning of the range.
+    ///   - threshold: Same as solve without range.
+    ///   - maxIterations: Same as solve without range.
+    /// - Returns: The array of values, the array of errors, and the array of iterations.
+    /// - Throws: For many reasons. Look at the return message.
+    public func solve(overRange ranges: [String: Range<Double>],
+                      withStride: Double,
+                      initialGuess: [String: Double] = [:],
+                      threshold: Double = 0.0001,
+                      maxIterations: Int = 1000) throws -> (values: [[String: Double]],
+                                                            error: [Double],
+                                                            iterations: [Int]) {
+
+        // Check we only have one variable
+        guard ranges.count == 1 else {
+            throw SymbolLabError.misc("Currently solve only can evaluate at one set of points.")
+        }
+        let (variable, range) = ranges.first!
+        // Make our array
+        let points: [String: [Double]] = [variable: Array(stride(from: range.lowerBound, to: range.upperBound, by: withStride))]
+        return try self.solve(at: points, initialGuess: initialGuess, threshold: threshold, maxIterations: maxIterations)
+    }
+
+    /// Solve the system over a range of values. Currently, only support a range for one value, but that is mostly just
+    /// because the graphing library only has 2d support at the moment.
+    ///
+    ///
+    /// - Parameters:
+    ///   - overRange: A dictionary with the variable to vary associated with the desired range. e.g. `["x": 0.0..<10.0]`
+    ///   - initialGuess: A set of initial guesses for the other variables at the beginning of the range.
+    ///   - threshold: Same as solve without range.
+    ///   - maxIterations: Same as solve without range.
+    /// - Returns: The array of values, the array of errors, and the array of iterations.
+    /// - Throws: For many reasons. Look at the return message.
+    public func solve(overRange ranges: [String: ClosedRange<Double>],
+                      withStride: Double,
+                      initialGuess: [String: Double] = [:],
+                      threshold: Double = 0.0001,
+                      maxIterations: Int = 1000) throws -> (values: [[String: Double]],
+                                                            error: [Double],
+                                                            iterations: [Int]) {
+
+        // Check we only have one variable
+        guard ranges.count == 1 else {
+            throw SymbolLabError.misc("Currently solve only can evaluate at one set of points.")
+        }
+        let (variable, range) = ranges.first!
+        // Make our array
+        let points: [String: [Double]] = [variable: Array(stride(from: range.lowerBound, through: range.upperBound, by: withStride))]
+        return try self.solve(at: points, initialGuess: initialGuess, threshold: threshold, maxIterations: maxIterations)
+    }
+
+
+    ///Solve the system at the given values. Currently, only support for one variable, but that is mostly because the
+    /// plotting library only supports 2d at the moment.
+    ///
+    /// - Parameters:
+    ///   - at: A dictionart associating a variable to a set of values. e.g. `["x": [0.0, 0.5, 1.0, 1.5, 2.0]]`
+    ///   - initialGuess: A set of initial guesses for the other variables at the first element of the values.
+    ///   - threshold:
+    ///   - maxIterations:
+    /// - Returns:
+    /// - Throws:
+    public func solve(at pointsDict: [String: [Double]],
+                      initialGuess: [String: Double] = [:],
+                      threshold: Double = 0.0001,
+                      maxIterations: Int = 1000) throws -> (values: [[String: Double]],
+                                                            error: [Double],
+                                                            iterations: [Int]) {
+        // Initialize the arrays that will store our data
+        var values: [[String:Double]] = []
+        var errors: [Double] = []
+        var iterations: [Int] = []
+        var guesses = initialGuess
+
+        // Check the number of variables
+        guard pointsDict.count == 1 else {
+            throw SymbolLabError.misc("Currently solve only can evaluate at one set of points.")
+        }
+        guard self.equations.count+1 == self.variables.count else {
+            throw SymbolLabError.misc("Unconstrained system.")
+        }
+
+        let (variable, points) = pointsDict.first! // We checked there will be exactly one
+
+        // Construct initial guess
+        for v in self.variables {
+            if(!guesses.keys.contains(v)) {
+                guesses[v] = 1
+            }
+        }
+
+        // Start at the first element
+        for point in points {
+            // Add a temporary constraint for the current point
+            // TODO: Don't construct the node by parsing. Fix this when you have math operators on nodes done
+            self.equations.append(System.parser.parse(cString: "\(variable)-\(point)")!)
+            let (val, err, n) = try self.solve(guess: guesses, threshold: threshold, maxIterations: maxIterations)
+            values.append(val)
+            errors.append(err)
+            iterations.append(n)
+            // Remove the constraint we just added
+            self.equations.popLast()
+            // Set the guesses to our current solutions (should be closer than 1,1,1,1,...)
+            guesses = val
+        }
+
+        return (values, errors, iterations)
     }
 
     /// Evaluate the system at the point given by the dictionary of variables and values.
@@ -139,14 +279,6 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         }
         return try self.eval(map)
     }
-    
-    /// Check whether there are the same number of variables as equations.
-    ///
-    /// - Returns: True if same, false otherwise
-    public func checkNumberOfVariables() -> Bool {
-        return self.variables.count == equations.count
-    }
-    
 }
 
 public class Jacobian: CustomStringConvertible {

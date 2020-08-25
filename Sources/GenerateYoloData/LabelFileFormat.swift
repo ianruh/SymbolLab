@@ -25,24 +25,26 @@ extension Double {
 protocol LabelFileWriter {
     static func write(nodes: [Node],
                       labelFile: String,
+                      classesFile: String,
                       svgDirectory: String,
                       jpgDirectory: String,
                       usingSVGSource svgSource: SVGSource,
                       tokenMap: [String: Int]?,
                       countStart: Int,
-                      size: Int) throws -> [String: Int]
+                      size: Int) throws
 }
 
 /// File writer for the format used by https://github.com/david8862/keras-YOLOv3-model-set
 struct KerasYOLOWriter: LabelFileWriter {
     static func write(nodes: [Node],
                       labelFile: String,
+                      classesFile: String,
                       svgDirectory: String,
                       jpgDirectory: String,
                       usingSVGSource svgSource: SVGSource,
                       tokenMap: [String: Int]? = nil,
                       countStart: Int = 1,
-                      size: Int = 200) throws -> [String: Int] {
+                      size: Int = 200) throws {
 
         var labelString: String = ""
 
@@ -106,13 +108,29 @@ struct KerasYOLOWriter: LabelFileWriter {
             count += 1
         }
 
+        // Write the label file
         let labelURL: URL = URL(fileURLWithPath: labelFile)
         try labelString.write(to: labelURL, atomically: true, encoding: .utf8)
 
+        // Write the classes file
         if let tm = tokenMap {
-            return tm
+            let items: [(String, Int)] = Array(tm).sorted(by: {$0.1 < $1.1})
+            print(items)
+            var str = ""
+            for it in items {
+                str += "\(it.0)\n"
+            }
+            let classesURL: URL = URL(fileURLWithPath: classesFile)
+            try str.write(to: classesURL, atomically: true, encoding: .utf8)
         } else {
-            return tokenMapAct
+            let items: [(String, Int)] = Array(tokenMapAct).sorted(by: {$0.1 < $1.1})
+            print(items)
+            var str = ""
+            for it in items {
+                str += "\(it.0)\n"
+            }
+            let classesURL: URL = URL(fileURLWithPath: classesFile)
+            try str.write(to: classesURL, atomically: true, encoding: .utf8)
         }
     }
 }

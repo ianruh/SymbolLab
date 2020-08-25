@@ -6,7 +6,7 @@
         "repositoryURL": "https://github.com/ianruh/LASwift.git",
         "state": {
           "branch": "linsolve",
-          "revision": "8c729378eb15e0ebaf80861317d23656c1233765",
+          "revision": "b8800b1077e22a48280d432ceb6ada025efeee30",
           "version": null
         }
       },
@@ -71,6 +71,15 @@
           "branch": null,
           "revision": "110beefe0b9a4af05b09f2d33faf52740d9229a7",
           "version": "0.0.6"
+        }
+      },
+      {
+        "package": "SwiftPlot",
+        "repositoryURL": "https://github.com/KarthikRIyer/swiftplot.git",
+        "state": {
+          "branch": null,
+          "revision": "c5424eb8688217029d44e941d3a1d2ccc18c3a82",
+          "version": "2.0.0"
         }
       },
       {
