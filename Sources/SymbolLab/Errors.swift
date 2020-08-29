@@ -12,5 +12,6 @@ public enum SymbolLabError: Error {
     case noValue(forVariable: String)
     case notApplicable(message: String)
     case noVariable(forValue: String)
+    case badAssignment(forEquation: String)
     case misc(_ message: String)
 }

@@ -115,8 +115,8 @@ extension Double {
 
     /// Get Integer of fractional value
     public var frac: Int {
-        var str = String(self)
-        var ind = str.index(of: ".")!
+        let str = String(self)
+        var ind = str.firstIndex(of: ".")!
         str.formIndex(after: &ind)
         return Int(str.substring(from: ind))!
     }

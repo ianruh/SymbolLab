@@ -1,6 +1,13 @@
 import SymEngine
 import SymbolLab
 
+precedencegroup ExponentiationPrecedence {
+    associativity: right
+    higherThan: MultiplicationPrecedence
+}
+
+infix operator ** : ExponentiationPrecedence
+
 public struct SymEngineBackend: SymbolLab.SymbolicMathEngine {
     public typealias Symbol = SymEngine.Symbol
 

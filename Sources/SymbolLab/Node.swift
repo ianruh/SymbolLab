@@ -7,6 +7,8 @@
 
 public class Node: CustomStringConvertible {
 
+    //------------------------ Properties ------------------------
+
     /// A string representation of the node. This should be overridden.
     public var description: String {
         preconditionFailure("description should be overridden")
@@ -21,6 +23,23 @@ public class Node: CustomStringConvertible {
     public var variables: Set<String> {
         preconditionFailure("variables should be overridden")
     }
+
+    /// Determine if the node is basic
+    public var isBasic: Bool {
+        return self as? Number != nil || self as? Variable != nil
+    }
+
+    /// Determine if the node is an operation
+    public var isOperation: Bool {
+        return self as? Operation != nil
+    }
+
+    /// Determine is the node is a function
+    public var isFunction: Bool {
+        return self as? Function != nil
+    }
+
+    //------------------------ Functions ------------------------
 
     public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
         preconditionFailure("This method must be overridden")
@@ -40,73 +59,6 @@ public class Node: CustomStringConvertible {
     public func evaluate(withValues values: [String: Double]) throws -> Double {
         preconditionFailure("This method must be overridden")
     }
-}
-
-extension Node {
-    /// Determine if the node is basic
-    public var isBasic: Bool {
-        return self as? Number != nil || self as? Variable != nil
-    }
-    
-    /// Determine if the node is an operation
-    public var isOperation: Bool {
-        return self as? Operation != nil
-    }
-    
-    /// Determine is the node is a function
-    public var isFunction: Bool {
-        return self as? Function != nil
-    }
-
-    /// Add operator for nodes
-    ///
-    /// - Parameters:
-    ///   - lhs: Left side of infix operation
-    ///   - rhs: Right side of infix operation
-    /// - Returns: New node adding the two
-    public static func +(_ lhs: Node, _ rhs: Node) -> Node {
-        return Add([lhs, rhs])
-    }
-
-    /// Subtract operator for nodes
-    ///
-    /// - Parameters:
-    ///   - lhs:
-    ///   - rhs:
-    /// - Returns:
-    public static func -(_ lhs: Node, _ rhs: Node) -> Node {
-        return Subtract([lhs, rhs])
-    }
-
-    /// Divide operator for nodes
-    ///
-    /// - Parameters:
-    ///   - lhs:
-    ///   - rhs:
-    /// - Returns:
-    public static func /(_ lhs: Node, _ rhs: Node) -> Node {
-        return Divide([lhs, rhs])
-    }
-
-    /// Multiply operator for nodes
-    ///
-    /// - Parameters:
-    ///   - lhs:
-    ///   - rhs:
-    /// - Returns:
-    public static func *(_ lhs: Node, _ rhs: Node) -> Node {
-        return Multiply([lhs, rhs])
-    }
-
-    /// Take the lhs to the power of the rhs
-    ///
-    /// - Parameters:
-    ///   - lhs:
-    ///   - rhs:
-    /// - Returns:
-//    public static func **(_ lhs: Node, _ rhs: Node) -> Node {
-//        return Power([lhs, rhs])
-//    }
 }
 
 public class Number: Node, ExpressibleByIntegerLiteral {
@@ -152,7 +104,9 @@ public class Number: Node, ExpressibleByIntegerLiteral {
     }
 }
 
-public class Variable: Node {
+public class Variable: Node, ExpressibleByStringLiteral {
+    public typealias StringLiteralType = String
+
     public var string: String
     
     override public var description: String {
@@ -167,8 +121,12 @@ public class Variable: Node {
         return [self.string]
     }
     
-    public init(_ str: String) {
+    public required init(stringLiteral str: String) {
         self.string = str
+    }
+
+    public convenience init(_ str: String) {
+        self.init(stringLiteral: str)
     }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
