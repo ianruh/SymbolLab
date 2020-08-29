@@ -5,17 +5,41 @@
 //  Created by Ian Ruh on 5/14/20.
 //
 
-import SymEngine
+public class Node: CustomStringConvertible {
 
-public protocol Node: CustomStringConvertible {
-    
-    var symbol: Symbol? {get}
-    var latex: String {get}
-    var variables: Set<String> {get}
-    
-    func generate(withOptions options: GeneratorOptions, depths: Depths) -> Node
-    func svg(using source: SVGSource) -> SVGElement?
-    func evaluate(withValues values: [String: Double]) throws -> Double
+    /// A string representation of the node. This should be overridden.
+    public var description: String {
+        preconditionFailure("description should be overridden")
+    }
+
+    /// A latex representation of the node. This should be overridden.
+    public var latex: String {
+        preconditionFailure("latex should be overridden")
+    }
+
+    /// The set of varibales in the node. This should be overridden.
+    public var variables: Set<String> {
+        preconditionFailure("variables should be overridden")
+    }
+
+    public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
+        preconditionFailure("This method must be overridden")
+    }
+
+    /// Generate random node with option. This should be overridden.
+    public func generate(withOptions options: GeneratorOptions, depths: Depths) -> Node {
+        preconditionFailure("This method must be overridden")
+    }
+
+    /// Get an svg of the node. This should be overridden.
+    public func svg(using source: SVGSource) -> SVGElement? {
+        preconditionFailure("This method must be overridden")
+    }
+
+    /// Evaluate the node. This should be overridden.
+    public func evaluate(withValues values: [String: Double]) throws -> Double {
+        preconditionFailure("This method must be overridden")
+    }
 }
 
 extension Node {
@@ -80,85 +104,87 @@ extension Node {
     ///   - lhs:
     ///   - rhs:
     /// - Returns:
-    public static func **(_ lhs: Node, _ rhs: Node) -> Node {
-        return Power([lhs, rhs])
-    }
+//    public static func **(_ lhs: Node, _ rhs: Node) -> Node {
+//        return Power([lhs, rhs])
+//    }
 }
 
-public struct Number: Node, ExpressibleByIntegerLiteral {
+public class Number: Node, ExpressibleByIntegerLiteral {
     public typealias IntegerLiteralType = Int
 
     public var value: Int
     
-    public var description: String {
+    override public var description: String {
         return "\(self.value)"
     }
-    
-    public var symbol: SymEngine.Symbol? {
-        return Symbol(self.value)
+
+    override public var variables: Set<String> {
+        return []
     }
     
-    public var latex: String {
+    override public var latex: String {
         return "\(self.value)"
     }
-    
-    public var variables: Set<String> = []
     
     public init(_ num: Int) {
         self.value = num
     }
 
-    public init(integerLiteral value: Int) {
+    required public convenience init(integerLiteral value: Int) {
         self.init(value)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    public override func getSymbol<Engine: SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
+        return Engine.new(self.value)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // No need to use the depths as this is a base node
         return Number(Int.random(withMaxDigits: options.numbers.maxWholeDigits))
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         return SVGUtilities.svg(of: self.description, using: source)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return Double(self.value)
     }
 }
 
-public struct Variable: Node {
+public class Variable: Node {
     public var string: String
     
-    public var description: String {
+    override public var description: String {
         return self.string
     }
     
-    public var symbol: Symbol? {
-        return Symbol(name: self.string)
-    }
-    
-    public var latex: String {
+    override public var latex: String {
         return "\(self.string)"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return [self.string]
     }
     
     public init(_ str: String) {
         self.string = str
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
+        return Engine.new(self.string)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // No need to use the depths as this is a base node
         Variable(options.variables.names.randomElement()!)
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         return SVGUtilities.svg(of: self.string, using: source)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         guard values.keys.contains(self.string) else {
             throw SymbolLabError.noValue(forVariable: self.string)
         }

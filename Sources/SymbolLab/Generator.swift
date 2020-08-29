@@ -161,17 +161,17 @@ public struct GeneratorUtilities {
     public static func updateOperations(_ options: inout GeneratorOptions, withDepths depths: Depths) {
         // Check fraction depth
         if(depths.fractionDepth >= options.operations.fractions.maxDepth) {
-            options.remove(operation: Divide([P,P]))
+            options.remove(operation: Divide())
         }
         
         // Check the exponent depth
         if(depths.exponentDepth >= options.operations.exponents.maxDepth) {
-            options.remove(operation: Power([P,P]))
+            options.remove(operation: Power())
         }
         
         // Check assignment depth
         if(!options.operations.assignments.allowNoneTopLevel && (depths.depth > depths.assignmentDepth || depths.assignmentDepth >= options.operations.assignments.maxChain)) {
-            options.remove(operation: Assign([P,P]))
+            options.remove(operation: Assign())
         }
         
         // Check function depth

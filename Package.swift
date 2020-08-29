@@ -16,6 +16,9 @@ let package = Package(
         .library(
              name:"databaseUtility",
              targets: ["DatabaseUtility"]),
+        .library(
+                name:"symEngineBackend",
+                targets: ["SymEngineBackend"]),
         .executable(
                 name:"generateYoloData",
                 targets: ["GenerateYoloData"]),
@@ -25,7 +28,7 @@ let package = Package(
         .package(url: "../../SymEngine", from: "0.0.0"),
 //        .package(url: "https://github.com/ianruh/SymEngine.swift", from: "0.0.2"),
         //.package(url: "https://github.com/vapor/postgres-kit.git", from: "2.0.0")
-        .package(url: "https://github.com/apple/swift-numerics", .exact("0.0.6")),
+        .package(url: "https://github.com/apple/swift-numerics", from: "0.0.5"),
         .package(
             url: "https://github.com/ianruh/LASwift.git",
             .branch("linsolve")
@@ -41,18 +44,23 @@ let package = Package(
             name: "SymbolLab",
             dependencies: [
                 .product(name: "RealModule", package: "swift-numerics"),
-//                .product(name: "SymEngine", package: "SymEngine.swift"),
-                "SymEngine",
                 "LASwift"
         ]),
         .target(
             name: "SymbolTest",
             dependencies: ["SymbolLab",
                            .product(name: "SwiftPlot", package: "swiftplot"),
-                           .product(name: "SVGRenderer", package: "swiftplot")]),
+                           .product(name: "SVGRenderer", package: "swiftplot"),
+                           "SymEngineBackend"]),
         .target(
             name: "DatabaseUtility",
             dependencies: ["SymbolLab", "PythonKit"]),
+        .target(
+                name: "SymEngineBackend",
+                dependencies: ["SymbolLab",
+                               //.product(name: "SymEngine", package: "SymEngine.swift"),
+                               "SymEngine",]
+        ),
         .target(
             name: "GenerateYoloData",
             dependencies: ["SymbolLab",

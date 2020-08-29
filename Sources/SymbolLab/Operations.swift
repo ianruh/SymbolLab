@@ -5,7 +5,6 @@
 //  Created by Ian Ruh on 5/14/20.
 //
 
-import SymEngine
 import Foundation
 
 //############################ Protocol and Precendence Definitions ##################
@@ -18,6 +17,7 @@ public enum OperationType {
     case prefix, infix, postfix, function
 }
 
+/// Operation precedence struct.
 public class OperationPrecedence: Comparable {
     var higherThan: OperationPrecedence?
     
@@ -44,6 +44,7 @@ public class OperationPrecedence: Comparable {
     }
 }
 
+/// The basic properties all opertaions need to have (plus a factory function)
 public protocol Operation: Node {
     var precedence: OperationPrecedence {get}
     var type: OperationType {get}
@@ -51,44 +52,15 @@ public protocol Operation: Node {
     var identifier: String {get}
     
     init(_ params: [Node])
+    init()
     
     func factory(_ params: [Node]) -> Node
 }
 
-// Useless, this is a hack
-public struct Op: Operation {    
-    public var precedence: OperationPrecedence = OperationPrecedence(higherThan: nil)
-    public var type: OperationType = .infix
-    public var associativity: OperationAssociativity = .none
-    public var identifier: String = ""
-    public init(_ params: [Node]) {}
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    public var symbol: Symbol? = nil
-    public var description: String = ""
-    public var latex: String = ""
-    public var variables: Set<String> = []
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        return Op([])
-    }
-    public func svg(using source: SVGSource) -> SVGElement? {
-        return nil
-    }
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
-        throw SymbolLabError.notApplicable(message: "shouldn't be used function in Op")
-    }
-}
-
-public let P = Op([])
-
 //############################ Basic Operations #############################
 
-/**
-Assign one node to the other.
-*/
-public struct Assign: Operation {
+/// Assign one node to the other.
+public class Assign: Node, Operation {
     // Nil means is the lowest possible precedence
     public let precedence: OperationPrecedence = OperationPrecedence(higherThan: nil)
     public let type: OperationType = .infix
@@ -99,34 +71,39 @@ public struct Assign: Operation {
     public var left: Node
     public var right: Node
     
-    public var description: String {
+    override public var description: String {
         // This is always true
         return "\(self.left)=\(self.right)"
     }
     
-    public var symbol: Symbol? {
-        // There is no corresponding representation in SymEngine
-        return nil
-    }
-    
-    public var latex: String {
+    override public var latex: String {
         return "\(self.left.latex)=\(self.right.latex)"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.left.variables + self.right.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.left = params[0]
         self.right = params[1]
+    }
+
+    override required public init() {
+        self.left = Node()
+        self.right = Node()
+        super.init()
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
+        return nil
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // Make copies
         var optionsCopy = options
         var depthsCopy = depths
@@ -139,7 +116,7 @@ public struct Assign: Operation {
         return Assign([newLeft, newRight])
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         let leftSVGOpt = self.left.svg(using: source)
         let rightSVGOpt = self.right.svg(using: source)
         let opSVGOpt = source.getSymbol(self.identifier)
@@ -149,16 +126,14 @@ public struct Assign: Operation {
         return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         throw SymbolLabError.notApplicable(message: "evaluate isn't applicable to assignment")
     }
 }
 
-/**
-A negative number
-*/
-public struct Negative: Operation {
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Multiply([P,P]).precedence)
+/// A negative number
+public class Negative: Node, Operation {
+    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Multiply().precedence)
     public let type: OperationType = .prefix
     public let associativity: OperationAssociativity = .none
     public let identifier: String = "-"
@@ -166,7 +141,7 @@ public struct Negative: Operation {
     // Store the parameters for the node
     public var argument: Node
     
-    public var description: String {
+    override public var description: String {
         // MAYBE?
 //        guard self.argument.isBasic || self.argument as? Decimal != nil else {
 //            print("Missused negative operation : '-\(self.argument)'")
@@ -175,11 +150,7 @@ public struct Negative: Operation {
         return "-\(self.argument)"
     }
     
-    public var symbol: Symbol? {
-        return SymEngine.neg(self.argument.symbol)
-    }
-    
-    public var latex: String {
+    override public var latex: String {
         // MAYBE?
 //        guard self.argument.isBasic || self.argument as? Decimal != nil else {
 //            print("Missused negative operation : '-\(self.argument)'")
@@ -188,24 +159,36 @@ public struct Negative: Operation {
         return "-\(self.argument.latex)"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    override required public init() {
+        self.argument = Node()
+        super.init()
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let argumentSymbol = self.argument.getSymbol(using: type) else {
+            return nil
+        }
+        return Engine.negate(argumentSymbol)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // We don't need to make any copies here
         return Negative([Number(1).generate(withOptions: options, depths: depths)])
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         // MAYBE?
 //        guard self.argument.isBasic || self.argument as? Decimal != nil else {
 //            print("Missused negative operation : '-\(self.argument)'")
@@ -218,86 +201,80 @@ public struct Negative: Operation {
         return SVGUtilities.compose(elements: [opSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try -1*self.argument.evaluate(withValues: values)
     }
 }
 
-/**
-A decimal number
-*/
-public struct Decimal: Operation {
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Negative([P,P]).precedence)
+/// A decimal number. Negatives are unknown here.
+public class Decimal: Number, Operation, ExpressibleByFloatLiteral {
+    public typealias FloatLiteralType = Double
+
+    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Negative().precedence)
     public let type: OperationType = .infix
     public let associativity: OperationAssociativity = .none
     public let identifier: String = "."
     
     // Store the parameters for the node
-    public var left: Node
-    public var right: Node
+    public var valueDouble: Double
     
-    public var description: String {
-        guard let leftNumber = self.left as? Number else {
-            print("Missused decimal operation : '\(self.left).\(self.right)'")
-            return ""
-        }
-        guard let rightNumber = self.right as? Number else {
-            print("Missused decimal operation : '\(self.left).\(self.right)'")
-            return ""
-        }
-        return "\(leftNumber).\(rightNumber)"
+    override public var description: String {
+        return "\(self.valueDouble)"
     }
     
-    public var symbol: Symbol? {
-        guard let leftNumber = self.left as? Number else {return nil}
-        guard let rightNumber = self.right as? Number else {return nil}
-        let valueOpt: Double? = Double("\(leftNumber).\(rightNumber)")
-        if let value = valueOpt {
-            return Symbol(value)
-        }
-        return nil
+    override public var latex: String {
+        return "\(self.valueDouble)"
     }
     
-    public var latex: String {
-        guard let leftNumber = self.left as? Number else {
-            print("Missused decimal operation : '\(self.left).\(self.right)'")
-            return ""
-        }
-        guard let rightNumber = self.right as? Number else {
-            print("Missused decimal operation : '\(self.left).\(self.right)'")
-            return ""
-        }
-        return "\(leftNumber.latex).\(rightNumber.latex)"
+    override public var variables: Set<String> {
+        return []
     }
     
-    public var variables: Set<String> = []
-    
-    public init(_ params: [Node]) {
-        self.left = params[0]
-        self.right = params[1]
+    required public init(_ params: [Node]) {
+        guard let leftNumber = params[0] as? Number else {
+            preconditionFailure("Misused decimal. \(params[0]) is not a Number")
+        }
+        guard let rightNumber = params[1] as? Number else {
+            preconditionFailure("Misused decimal. \(params[1]) is not a Number")
+        }
+        guard let value = Double("\(leftNumber).\(rightNumber)") else {
+            preconditionFailure("Well not idea how this happens. But here you go: \(leftNumber).\(rightNumber) apparently can't be a Double")
+        }
+        self.valueDouble = value
+        super.init(0)
     }
-    
+
+    public required init(floatLiteral value: Double) {
+        self.valueDouble = value
+        super.init(0)
+    }
+
+    required public convenience init(integerLiteral value: Int) {
+        self.init(floatLiteral: Double(value))
+    }
+
+    public required init() {
+        self.valueDouble = 0
+        super.init(0)
+    }
+
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
+        return Engine.new(self.value)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         let newLeft = Number(1).generate(withOptions: options, depths: depths)
         let newRight = Number(1).generate(withOptions: options, depths: depths)
         return Decimal([newLeft, newRight])
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard self.left as? Number != nil else {
-            print("Missused decimal operation : '\(self.left).\(self.right)'")
-            return nil
-        }
-        guard self.right as? Number != nil else {
-            print("Missused decimal operation : '\(self.left).\(self.right)'")
-            return nil
-        }
-        let leftSVGOpt = self.left.svg(using: source)
-        let rightSVGOpt = self.right.svg(using: source)
+    override public func svg(using source: SVGSource) -> SVGElement? {
+        let leftSVGOpt = Number(self.valueDouble.whole).svg(using: source)
+        let rightSVGOpt = Number(self.valueDouble.frac).svg(using: source)
         let opSVGOpt = source.getSymbol(self.identifier)
         guard let rightSVG = rightSVGOpt else { return nil }
         guard let leftSVG = leftSVGOpt else { return nil }
@@ -305,23 +282,15 @@ public struct Decimal: Operation {
         return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
-        guard let leftNumber = self.left as? Number else {
-            throw SymbolLabError.notApplicable(message: "Non number in decimal op")
-        }
-        guard let rightNumber = self.right as? Number else {
-            throw SymbolLabError.notApplicable(message: "Non number in decimal op")
-        }
-        return Double("\(leftNumber).\(rightNumber)")!
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return self.valueDouble
     }
 }
 
-/**
-Add one node to the other.
-*/
-public struct Add: Operation {
+/// Add one node to the other.
+public class Add: Node, Operation {
     
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Assign([P,P]).precedence)
+    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Assign().precedence)
     public let type: OperationType = .infix
     public let associativity: OperationAssociativity = .left
     public let identifier: String = "+"
@@ -330,7 +299,7 @@ public struct Add: Operation {
     private var left: Node
     private var right: Node
     
-    public var description: String {
+    override public var description: String {
         var leftString = "\(self.left)"
         var rightString = "\(self.right)"
         
@@ -349,11 +318,7 @@ public struct Add: Operation {
         return "\(leftString)+\(rightString)"
     }
     
-    public var symbol: Symbol? {
-        return self.left.symbol + self.right.symbol
-    }
-    
-    public var latex: String {
+    override public var latex: String {
         var leftString = "\(self.left.latex)"
         var rightString = "\(self.right.latex)"
         
@@ -372,20 +337,32 @@ public struct Add: Operation {
         return "\(leftString)+\(rightString)"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.left.variables + self.right.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.left = params[0]
         self.right = params[1]
+    }
+
+    override required public init() {
+        self.left = Node()
+        self.right = Node()
+        super.init()
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let left = self.left.getSymbol(using: type) else {return nil}
+        guard let right = self.right.getSymbol(using: type) else {return nil}
+        return Engine.add(left, right)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // Make copies
         var optionsCopy = options
         var depthsCopy = depths
@@ -397,7 +374,7 @@ public struct Add: Operation {
         return Add([newLeft, newRight])
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         let leftSVGOpt = self.left.svg(using: source)
         let rightSVGOpt = self.right.svg(using: source)
         let opSVGOpt = source.getSymbol(self.identifier)
@@ -420,17 +397,15 @@ public struct Add: Operation {
         return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.left.evaluate(withValues: values) + self.right.evaluate(withValues: values)
     }
 }
 
-/**
-Subtract one node from the other.
-*/
-public struct Subtract: Operation {
+/// Subtract one node from the other.
+public class Subtract: Node, Operation {
     
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Assign([P,P]).precedence)
+    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Assign().precedence)
     public let type: OperationType = .infix
     public let associativity: OperationAssociativity = .left
     public let identifier: String = "-"
@@ -439,7 +414,7 @@ public struct Subtract: Operation {
     private var left: Node
     private var right: Node
     
-    public var description: String {
+    override public var description: String {
         var leftString = "\(self.left)"
         var rightString = "\(self.right)"
         
@@ -458,11 +433,7 @@ public struct Subtract: Operation {
         return "\(leftString)-\(rightString)"
     }
     
-    public var symbol: Symbol? {
-        return self.left.symbol - self.right.symbol
-    }
-    
-    public var latex: String {
+    override public var latex: String {
         var leftString = "\(self.left.latex)"
         var rightString = "\(self.right.latex)"
         
@@ -481,20 +452,32 @@ public struct Subtract: Operation {
         return "\(leftString)-\(rightString)"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.left.variables + self.right.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.left = params[0]
         self.right = params[1]
+    }
+
+    override required public init() {
+        self.left = Node()
+        self.right = Node()
+        super.init()
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let left = self.left.getSymbol(using: type) else {return nil}
+        guard let right = self.right.getSymbol(using: type) else {return nil}
+        return Engine.subtract(left, right)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // Make copies
         var optionsCopy = options
         var depthsCopy = depths
@@ -502,14 +485,14 @@ public struct Subtract: Operation {
         depthsCopy.depth += 1
         // ToDo: This isn't exactly what I want, because it disallows
         // 1-(-2), while I just want to disallow 1--2
-        optionsCopy.remove(operation: Negative([P]))
+        optionsCopy.remove(operation: Negative())
         
         let newLeft = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
         let newRight = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
         return Subtract([newLeft, newRight])
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         let leftSVGOpt = self.left.svg(using: source)
         let rightSVGOpt = self.right.svg(using: source)
         let opSVGOpt = source.getSymbol(self.identifier)
@@ -532,17 +515,15 @@ public struct Subtract: Operation {
         return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
-        return try  self.left.evaluate(withValues: values) - self.right.evaluate(withValues: values)
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+        return try self.left.evaluate(withValues: values) - self.right.evaluate(withValues: values)
     }
 }
 
-/**
-Multiply one node by the other.
-*/
-public struct Multiply: Operation {
+/// Multiply one node by the other.
+public class Multiply: Node, Operation {
     
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Add([P,P]).precedence)
+    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Add().precedence)
     public let type: OperationType = .infix
     public let associativity: OperationAssociativity = .left
     public let identifier: String = "*"
@@ -551,7 +532,7 @@ public struct Multiply: Operation {
     private var left: Node
     private var right: Node
     
-    public var description: String {
+    override public var description: String {
         var leftString = "\(self.left)"
         var rightString = "\(self.right)"
         
@@ -570,11 +551,7 @@ public struct Multiply: Operation {
         return "\(leftString)*\(rightString)"
     }
     
-    public var symbol: Symbol? {
-        return self.left.symbol * self.right.symbol
-    }
-    
-    public var latex: String {
+    override public var latex: String {
         var leftString = "\(self.left.latex)"
         var rightString = "\(self.right.latex)"
         
@@ -593,20 +570,32 @@ public struct Multiply: Operation {
         return "\(leftString)\\cdot \(rightString)"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.left.variables + self.right.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.left = params[0]
         self.right = params[1]
+    }
+
+    override required public init() {
+        self.left = Node()
+        self.right = Node()
+        super.init()
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let left = self.left.getSymbol(using: type) else {return nil}
+        guard let right = self.right.getSymbol(using: type) else {return nil}
+        return Engine.multiply(left, right)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // Make copies
         var optionsCopy = options
         var depthsCopy = depths
@@ -618,7 +607,7 @@ public struct Multiply: Operation {
         return Multiply([newLeft, newRight])
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         let leftSVGOpt = self.left.svg(using: source)
         let rightSVGOpt = self.right.svg(using: source)
         let opSVGOpt = source.getSymbol(self.identifier)
@@ -641,17 +630,15 @@ public struct Multiply: Operation {
         return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.left.evaluate(withValues: values) * self.right.evaluate(withValues: values)
     }
 }
 
-/**
-Divide one node by the other.
-*/
-public struct Divide: Operation {
+/// Divide one node by the other.
+public class Divide: Node, Operation {
     
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Add([P,P]).precedence)
+    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Add().precedence)
     public let type: OperationType = .infix
     public let associativity: OperationAssociativity = .left
     public let identifier: String = "/"
@@ -660,7 +647,7 @@ public struct Divide: Operation {
     private var left: Node
     private var right: Node
     
-    public var description: String {
+    override public var description: String {
         var leftString = "\(self.left)"
         var rightString = "\(self.right)"
         
@@ -679,28 +666,36 @@ public struct Divide: Operation {
         return "\(leftString)/\(rightString)"
     }
     
-    public var symbol: Symbol? {
-        return self.left.symbol / self.right.symbol
-    }
-    
-    public var latex: String {
+    override public var latex: String {
         return "\\frac{\(self.left.latex)}{\(self.right.latex)}"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.left.variables + self.right.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.left = params[0]
         self.right = params[1]
+    }
+
+    override required public init() {
+        self.left = Node()
+        self.right = Node()
+        super.init()
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let left = self.left.getSymbol(using: type) else {return nil}
+        guard let right = self.right.getSymbol(using: type) else {return nil}
+        return Engine.divide(left, right)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // Make copies
         var optionsCopy = options
         var depthsCopy = depths
@@ -713,7 +708,7 @@ public struct Divide: Operation {
         return Divide([newLeft, newRight])
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         let leftSVGOpt = self.left.svg(using: source)
         let rightSVGOpt = self.right.svg(using: source)
         let barSVGOpt = source.getSymbol("-")
@@ -728,17 +723,15 @@ public struct Divide: Operation {
         return SVGUtilities.compose(elements: [leftSVG, barSVG, rightSVG], spacing: SVGOptions.fractionSpacing, alignment: .center, direction: .vertical)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.left.evaluate(withValues: values) / self.right.evaluate(withValues: values)
     }
 }
 
-/**
-Power of one node to the other.
-*/
-public struct Power: Operation {
+/// Power of one node to the other.
+public class Power: Node, Operation {
     
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Negative([P,P]).precedence)
+    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Negative().precedence)
     public let type: OperationType = .infix
     public let associativity: OperationAssociativity = .right
     public let identifier: String = "^"
@@ -747,7 +740,7 @@ public struct Power: Operation {
     private var left: Node
     private var right: Node
     
-    public var description: String {
+    override public var description: String {
         var leftString = "\(self.left)"
         var rightString = "\(self.right)"
         
@@ -766,11 +759,7 @@ public struct Power: Operation {
         return "\(leftString)^\(rightString)"
     }
     
-    public var symbol: Symbol? {
-        return self.left.symbol ** self.right.symbol
-    }
-    
-    public var latex: String {
+    override public var latex: String {
         var leftString = self.left.latex
         if let op = self.left as? Operation {
             if(op.precedence < self.precedence && op.type == .infix) {
@@ -780,19 +769,32 @@ public struct Power: Operation {
         return "\(leftString)^{\(self.right.latex)}"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.left.variables + self.right.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.left = params[0]
         self.right = params[1]
+    }
+
+    override required public init() {
+        self.left = Node()
+        self.right = Node()
+        super.init()
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let left = self.left.getSymbol(using: type) else {return nil}
+        guard let right = self.right.getSymbol(using: type) else {return nil}
+        return Engine.exponentiate(left, right)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // Make copies
         var optionsCopy = options
         var depthsCopy = depths
@@ -805,7 +807,7 @@ public struct Power: Operation {
         return Power([newLeft, newRight])
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         let leftSVGOpt = self.left.svg(using: source)
         let rightSVGOpt = self.right.svg(using: source)
         guard var leftSVG = leftSVGOpt else { return nil }
@@ -827,17 +829,15 @@ public struct Power: Operation {
         return svg
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try pow(self.left.evaluate(withValues: values), self.right.evaluate(withValues: values))
     }
 }
 
-/**
-Factorial of a node.
-*/
-public struct Factorial: Operation {
+/// Factorial of a node.
+public class Factorial: Node, Operation {
     
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Power([P,P]).precedence)
+    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Power().precedence)
     public let type: OperationType = .postfix
     public let associativity: OperationAssociativity = .none
     public let identifier: String = "!"
@@ -845,7 +845,7 @@ public struct Factorial: Operation {
     // Store the parameters for the node
     private var argument: Node
     
-    public var description: String {
+    override public var description: String {
         // Wrap if needed
         if let op = self.argument as? Operation {
             if(op.type != .function) {
@@ -856,12 +856,7 @@ public struct Factorial: Operation {
         return "\(self.argument)!"
     }
     
-    public var symbol: Symbol? {
-        #warning("Factorial has not been implemented yet.")
-        return nil
-    }
-    
-    public var latex: String {
+    override public var latex: String {
         // Wrap if needed
         if let op = self.argument as? Operation {
             if(op.type != .function) {
@@ -872,19 +867,29 @@ public struct Factorial: Operation {
         return "\(self.argument.latex)!"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    override required public init() {
+        self.argument = Node()
+        super.init()
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        // TODO: Factorial in symbolic math protocol
+        return nil
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // Make copies
         var optionsCopy = options
         var depthsCopy = depths
@@ -895,7 +900,7 @@ public struct Factorial: Operation {
         return Factorial([newParam])
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         let argSVGOpt = argument.svg(using: source)
         guard var argSVG = argSVGOpt else { return nil }
         guard let opSVG = source.getSymbol("!") else { return nil }
@@ -910,8 +915,8 @@ public struct Factorial: Operation {
         return SVGUtilities.compose(elements: [argSVG, opSVG], spacing: SVGOptions.parethesesSpacing, alignment: .end, direction: .horizontal)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
-        #warning("Not implemented")
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+        // TODO: Factorial evaluation
         throw SymbolLabError.notApplicable(message: "Factorial not implemented for the moment")
     }
 }

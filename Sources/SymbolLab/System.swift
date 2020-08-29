@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import SymEngine
 import LASwift
 
 public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
@@ -43,8 +42,8 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     }
 
     /// The Jacobian of the system, if one can be constructed
-    public var jacobian: Jacobian? {
-        return Jacobian(system: self)
+    public func getJacobian<Engine: SymbolicMathEngine>() -> Jacobian<Engine>? {
+        return Jacobian<Engine>(system: self)
     }
 
     /// The set of equations that constitute the system
@@ -72,13 +71,13 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     ///   - maxIterations: The maximum number of iterations to perform before stopping.
     /// - Returns: A vector of solutions to the system, ordered as is the system's veriableSequence.
     /// - Throws: An error for many reasons. Look at error message for details.
-    public func solve(guess: [String: Double] = [:], threshold: Double = 0.0001, maxIterations: Int = 1000) throws -> (values: [String: Double], error: Double, iterations: Int) {
+    public func solve<Engine: SymbolicMathEngine>(guess: [String: Double] = [:], threshold: Double = 0.0001, maxIterations: Int = 1000, using backend: Engine.Type) throws -> (values: [String: Double], error: Double, iterations: Int) {
         guard self.variables.count == self.equations.count else {
             throw SymbolLabError.misc("Unconstrained system.")
         }
         // Get the jacobian of the system
-        guard let jacobian = self.jacobian else {
-            throw SymbolLabError.misc("Could not calculate jacobian")
+        guard let jacobian: Jacobian<Engine> = self.getJacobian() else {
+            throw SymbolLabError.misc("Could not calculate Jacobian")
         }
         // Root vector
         let zero_vec = Vector(repeating: 0, count: self.equations.count)
@@ -146,11 +145,12 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     ///   - maxIterations: Same as solve without range.
     /// - Returns: The array of values, the array of errors, and the array of iterations.
     /// - Throws: For many reasons. Look at the return message.
-    public func solve(overRange ranges: [String: Range<Double>],
+    public func solve<Engine: SymbolicMathEngine>(overRange ranges: [String: Range<Double>],
                       withStride: Double,
                       initialGuess: [String: Double] = [:],
                       threshold: Double = 0.0001,
-                      maxIterations: Int = 1000) throws -> (values: [[String: Double]],
+                      maxIterations: Int = 1000,
+                      using backend: Engine.Type) throws -> (values: [[String: Double]],
                                                             error: [Double],
                                                             iterations: [Int]) {
 
@@ -161,7 +161,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         let (variable, range) = ranges.first!
         // Make our array
         let points: [String: [Double]] = [variable: Array(stride(from: range.lowerBound, to: range.upperBound, by: withStride))]
-        return try self.solve(at: points, initialGuess: initialGuess, threshold: threshold, maxIterations: maxIterations)
+        return try self.solve(at: points, initialGuess: initialGuess, threshold: threshold, maxIterations: maxIterations, using: backend)
     }
 
     /// Solve the system over a range of values. Currently, only support a range for one value, but that is mostly just
@@ -175,11 +175,12 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     ///   - maxIterations: Same as solve without range.
     /// - Returns: The array of values, the array of errors, and the array of iterations.
     /// - Throws: For many reasons. Look at the return message.
-    public func solve(overRange ranges: [String: ClosedRange<Double>],
+    public func solve<Engine: SymbolicMathEngine>(overRange ranges: [String: ClosedRange<Double>],
                       withStride: Double,
                       initialGuess: [String: Double] = [:],
                       threshold: Double = 0.0001,
-                      maxIterations: Int = 1000) throws -> (values: [[String: Double]],
+                      maxIterations: Int = 1000,
+                      using backend: Engine.Type) throws -> (values: [[String: Double]],
                                                             error: [Double],
                                                             iterations: [Int]) {
 
@@ -190,7 +191,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         let (variable, range) = ranges.first!
         // Make our array
         let points: [String: [Double]] = [variable: Array(stride(from: range.lowerBound, through: range.upperBound, by: withStride))]
-        return try self.solve(at: points, initialGuess: initialGuess, threshold: threshold, maxIterations: maxIterations)
+        return try self.solve(at: points, initialGuess: initialGuess, threshold: threshold, maxIterations: maxIterations, using: backend)
     }
 
 
@@ -204,10 +205,11 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     ///   - maxIterations:
     /// - Returns:
     /// - Throws:
-    public func solve(at pointsDict: [String: [Double]],
+    public func solve<Engine: SymbolicMathEngine>(at pointsDict: [String: [Double]],
                       initialGuess: [String: Double] = [:],
                       threshold: Double = 0.0001,
-                      maxIterations: Int = 1000) throws -> (values: [[String: Double]],
+                      maxIterations: Int = 1000,
+                      using backend: Engine.Type) throws -> (values: [[String: Double]],
                                                             error: [Double],
                                                             iterations: [Int]) {
         // Initialize the arrays that will store our data
@@ -238,7 +240,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             // Add a temporary constraint for the current point
             // TODO: Don't construct the node by parsing. Fix this when you have math operators on nodes done
             self.equations.append(System.parser.parse(cString: "\(variable)-\(point)")!)
-            let (val, err, n) = try self.solve(guess: guesses, threshold: threshold, maxIterations: maxIterations)
+            let (val, err, n) = try self.solve(guess: guesses, threshold: threshold, maxIterations: maxIterations, using: backend)
             values.append(val)
             errors.append(err)
             iterations.append(n)
@@ -281,7 +283,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     }
 }
 
-public class Jacobian: CustomStringConvertible {
+public class Jacobian<Engine: SymbolicMathEngine>: CustomStringConvertible {
     // Row major
     private var elements: [[Node]]
     private let system: System
@@ -316,20 +318,15 @@ public class Jacobian: CustomStringConvertible {
         self.elements = []
         for eq in system.equations {
             // Make sure it is defined
-            guard let eqSymbol = eq.symbol else {
-                return nil
-            }
+            guard let eqSymbol = eq.getSymbol(using: Engine.self) else {return nil}
             // Make row
             var row: [Node] = []
             for variable in variables {
                 let node = Variable(variable)
-                guard let derivative = SymEngine.diff(of: eqSymbol, withRespectTo: node.symbol!) else {
-                    return nil
-                }
+                guard let nodeSymbol = node.getSymbol(using: Engine.self) else {return nil}
+                guard let derivative = Engine.diff(of: eqSymbol, withRespectTo: nodeSymbol) else {return nil}
 //                print("\(derivative.description)       --->      \(derivative.symbolLabString)")
-                guard let derivativeNode = parser.parse(cString: derivative.symbolLabString) else {
-                    return nil
-                }
+                guard let derivativeNode = Engine.constructNode(from: derivative) else {return nil}
                 row.append(derivativeNode)
             }
             // Append row

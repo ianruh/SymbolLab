@@ -5,7 +5,6 @@
 //  Created by Ian Ruh on 5/15/20.
 //
 
-import SymEngine
 import RealModule
 
 //######################### Define the protocol #########################
@@ -24,8 +23,9 @@ public protocol Function: Operation {
 }
 
 extension Function {
+
     public var precedence: OperationPrecedence {
-        OperationPrecedence(higherThan: Factorial([P]).precedence)
+        OperationPrecedence(higherThan: Factorial().precedence)
     }
     public var type: OperationType {
         .function
@@ -61,38 +61,42 @@ extension Function {
  This is only for parsing to fit into the scheme. Otherwise it shouldn't be used because paretheses do nothing
  other than influence the order of operations.
  */
-public struct Parentheses: Function {
+public class Parentheses: Node, Function {
     // No identifier
     public let identifier: String = ""
     public let numArguments: Int = 1
     
     private var param: Node // Store the parameter for the node
     
-    public var symbol: Symbol? {
-        return self.param.symbol
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "(\(self.param))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         return "(\(self.param.latex))"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.param.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.param = params[0]
+    }
+
+    override required public convenience init() {
+        self.init([Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        return self.param.getSymbol(using: type)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // Make copies
         var optionsCopy = options
         var depthsCopy = depths
@@ -109,17 +113,17 @@ public struct Parentheses: Function {
         return self.factory(params)
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
+    override public func svg(using source: SVGSource) -> SVGElement? {
         guard let argSVG = self.param.svg(using: source) else { return nil }
         return SVGUtilities.parentheses(argSVG, using: source)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.param.evaluate(withValues: values)
     }
 }
 
-public struct Derivative: Function {
+public class Derivative: Node, Function {
     public let identifier: String = "d"
     public let numArguments: Int = 2
     
@@ -127,15 +131,11 @@ public struct Derivative: Function {
     private var diffOf: Node
     private var withRespectTo: Node
     
-    public var symbol: Symbol? {
-        return SymEngine.diff(of: self.diffOf.symbol, withRespectTo: self.withRespectTo.symbol)
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "d(\(self.diffOf),\(self.withRespectTo))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         var topStr = "\(self.diffOf.latex)"
         var bottomStr = "\(self.withRespectTo.latex)"
         if(!self.diffOf.isBasic && !self.diffOf.isFunction) {
@@ -147,20 +147,30 @@ public struct Derivative: Function {
         return "\\frac{d \(topStr)}{d \(bottomStr)}"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.diffOf.variables + self.withRespectTo.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.diffOf = params[0]
         self.withRespectTo = params[1]
+    }
+
+    override required public convenience init() {
+        self.init([Node(), Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let of = self.diffOf.getSymbol(using: type) else {return nil}
+        guard let v = self.withRespectTo.getSymbol(using: type) else {return nil}
+        return Engine.diff(of: of, withRespectTo: v)
+    }
+
+    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
         // Make copies
         var optionsCopy = options
         var depthsCopy = depths
@@ -177,8 +187,8 @@ public struct Derivative: Function {
         return self.factory(params)
     }
     
-    public func svg(using source: SVGSource) -> SVGElement? {
-        #warning("Not implemented yet")
+    override public func svg(using source: SVGSource) -> SVGElement? {
+        // TODO: SVG of derivative
         return nil
     }
 
@@ -191,25 +201,26 @@ public struct Derivative: Function {
     /// - Parameter values: The values to evaluate at.
     /// - Returns: The value the node evaluates to at the given points.
     /// - Throws: If evaluation fails for some reason.
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         // Try symbolically
-        do {
-            guard let derSymbol = self.symbol else {
-                throw SymbolLabError.misc("Couldn't get derivative symbol for '\(self.description)'")
-            }
-            guard let derNode = Parser().parse(cString: derSymbol.symbolLabString) else {
-                throw SymbolLabError.misc("Couldn't get derivative node for '\(derSymbol.description)'")
-            }
-
-            return try derNode.evaluate(withValues: values)
-        } catch {
-            #if DEBUG
-            print("""
-                  Could not evaluate derivative symbolically because:
-                  \(error)
-                  """)
-            #endif
-        }
+        // TODO: Symbolic derivative in evaluate
+//        do {
+//            guard let derSymbol: Symbol = self.symbol else {
+//                throw SymbolLabError.misc("Couldn't get derivative symbol for '\(self.description)'")
+//            }
+//            guard let derNode = Parser().parse(cString: derSymbol.symbolLabString) else {
+//                throw SymbolLabError.misc("Couldn't get derivative node for '\(derSymbol.description)'")
+//            }
+//
+//            return try derNode.evaluate(withValues: values)
+//        } catch {
+//            #if DEBUG
+//            print("""
+//                  Could not evaluate derivative symbolically because:
+//                  \(error)
+//                  """)
+//            #endif
+//        }
         // Try numerically
         guard let variable = self.withRespectTo as? Variable else {
             // TODO: Numerical derivatives with respect to non-variables (aka other functions)
@@ -228,7 +239,7 @@ public struct Derivative: Function {
     }
 }
 
-public struct Integral: Function {
+public class Integral: Node, Function {
     public let identifier: String = "int"
     public let numArguments: Int = 4
     
@@ -238,17 +249,11 @@ public struct Integral: Function {
     private var lowerBound: Node
     private var upperBound: Node
     
-    public var symbol: Symbol? {
-        // Not currently implemented
-        #warning("Integration has not been implemented yet in SymEngine")
-        return nil
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "int(\(self.integrand),\(self.withRespectTo),\(self.lowerBound),\(self.upperBound))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         let bottomStr = "\(self.lowerBound.latex)"
         let topStr = "\(self.upperBound.latex)"
         let integrandStr = "\(self.integrand.latex)"
@@ -260,1430 +265,1484 @@ public struct Integral: Function {
         return "\\int_{\(bottomStr)}^{\(topStr)} \(integrandStr) d\(withRespectToStr)"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.integrand.variables + self.withRespectTo.variables + self.lowerBound.variables + self.upperBound.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.integrand = params[0]
         self.withRespectTo = params[1]
         self.lowerBound = params[2]
         self.upperBound = params[3]
     }
+
+    override required public convenience init() {
+        self.init([Node(), Node(), Node(), Node()])
+    }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        #warning("Not implemented yet")
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        // TODO: Symbolic integration
+        return nil
+    }
+
+    override public func svg(using source: SVGSource) -> SVGElement? {
+        // TODO: SVG of integral
         return nil
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
-        #warning("Maybe just do it numerically")
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+        // TODO: Numerical integration
         throw SymbolLabError.notApplicable(message: "Can't evaluate integrals")
     }
 }
 
-public struct Expand: Function {
+public class Expand: Node, Function {
     public let identifier: String = "expand"
     public let numArguments: Int = 1
     
     // Store the parameters for the node
     private var argument: Node
     
-    public var symbol: Symbol? {
-        return expand(self.argument.symbol)
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "expand(\(self.argument))"
     }
     
     // There is no equivalent of this as this isn't really mathematical
-    public var latex: String {
+    override public var latex: String {
         return self.argument.latex
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    override required public convenience init() {
+        self.init([Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let param = self.argument.getSymbol(using: type) else {return nil}
+        return Engine.expand(param)
+    }
+
+    override public func svg(using source: SVGSource) -> SVGElement? {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.argument.evaluate(withValues: values)
     }
 }
 
-public struct AbsoluteValue: Function {
+public class AbsoluteValue: Node, Function {
     public let identifier: String = "abs"
     public let numArguments: Int = 1
     
     // Store the parameters for the node
     private var argument: Node
     
-    public var symbol: Symbol? {
-        return abs(self.argument.symbol)
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "abs(\(self.argument))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         return "\\left| \(self.argument.latex) \\right|"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    override required public convenience init() {
+        self.init([Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let param = self.argument.getSymbol(using: type) else {return nil}
+        return Engine.abs(param)
+    }
+
+    override public func svg(using source: SVGSource) -> SVGElement? {
         guard let pipeSVG = source.getSymbol("|") else { return nil }
         guard let argSVG = self.argument.svg(using: source) else { return nil }
         let pipe2SVG = pipeSVG
         return SVGUtilities.compose(elements: [pipeSVG, argSVG, pipe2SVG], spacing: SVGOptions.parethesesSpacing, alignment: .center, direction: .horizontal)
     }
     
-    public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [String : Double]) throws -> Double {
         let val = try self.argument.evaluate(withValues: values)
         return val > 0 ? val: -1*val
     }
 }
 
-public struct ErrorFunction: Function {
+public class ErrorFunction: Node, Function {
     public let identifier: String = "erf"
     public let numArguments: Int = 1
     
     // Store the parameters for the node
     private var argument: Node
     
-    public var symbol: Symbol? {
-        return erf(self.argument.symbol)
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "erf(\(self.argument))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         return "\\textrm{erf}(\(self.argument.latex))"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    override required public convenience init() {
+        self.init([Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let param = self.argument.getSymbol(using: type) else {return nil}
+        return Engine.erf(param)
+    }
+
+    override public func svg(using source: SVGSource) -> SVGElement? {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
+    override public func evaluate(withValues values: [String: Double]) throws -> Double {
         throw SymbolLabError.notApplicable(message: "erf not implemneted yet")
     }
 }
 
-public struct Sin: Function {
+public class Sin: Node, Function {
     public let identifier: String = "sin"
     public let numArguments: Int = 1
     
     // Store the parameters for the node
     private var argument: Node
     
-    public var symbol: Symbol? {
-        return sin(self.argument.symbol)
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "sin(\(self.argument))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         return "\\sin(\(self.argument.latex))"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
     }
 
-    public init(_ param: Node) {
+    public convenience init(_ param: Node) {
         self.init([param])
+    }
+
+    override required public convenience init() {
+        self.init([Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let param = self.argument.getSymbol(using: type) else {return nil}
+        return Engine.sin(param)
+    }
+
+    override public func svg(using source: SVGSource) -> SVGElement? {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
+    override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .sin(self.argument.evaluate(withValues: values))
     }
 }
 
-public struct Cos: Function {
+public class Cos: Node, Function {
     public let identifier: String = "cos"
     public let numArguments: Int = 1
     
     // Store the parameters for the node
     private var argument: Node
     
-    public var symbol: Symbol? {
-        return cos(self.argument.symbol)
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "cos(\(self.argument))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         return "\\cos(\(self.argument.latex))"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
     }
 
-    public init(_ param: Node) {
+    public convenience init(_ param: Node) {
         self.init([param])
+    }
+
+    override required public convenience init() {
+        self.init([Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let param = self.argument.getSymbol(using: type) else {return nil}
+        return Engine.cos(param)
+    }
+
+    override public func svg(using source: SVGSource) -> SVGElement? {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
+    override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .cos(self.argument.evaluate(withValues: values))
     }
 }
 
-public struct Tan: Function {
+public class Tan: Node, Function {
     public let identifier: String = "tan"
     public let numArguments: Int = 1
     
     // Store the parameters for the node
     private var argument: Node
     
-    public var symbol: Symbol? {
-        return tan(self.argument.symbol)
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "tan(\(self.argument))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         return "\\tan(\(self.argument.latex))"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
     }
 
-    public init(_ param: Node) {
+    public convenience init(_ param: Node) {
         self.init([param])
+    }
+
+    override required public convenience init() {
+        self.init([Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let param = self.argument.getSymbol(using: type) else {return nil}
+        return Engine.tan(param)
+    }
+
+    override public func svg(using source: SVGSource) -> SVGElement? {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
+    override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .tan(self.argument.evaluate(withValues: values))
     }
 }
 
-public struct Asin: Function {
-    public let identifier: String = "asin"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return asin(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "asin(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\arcsin(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
+//public struct Asin: Function {
+//    public let identifier: String = "asin"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return asin(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "asin(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\arcsin(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .asin(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Acos: Function {
+//    public let identifier: String = "acos"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return acos(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "acos(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\arccos(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .acos(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Atan: Function {
+//    public let identifier: String = "atan"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return atan(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "atan(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\arctan(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .atan(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Csc: Function {
+//    public let identifier: String = "csc"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return csc(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "csc(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\csc(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try 1 / .sin(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Sec: Function {
+//    public let identifier: String = "sec"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return sec(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "sec(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\sec(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try 1  / .cos(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Cot: Function {
+//    public let identifier: String = "cot"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return cot(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "cot(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\cot(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try 1 / .tan(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Acsc: Function {
+//    public let identifier: String = "acsc"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return acsc(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "acsc(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{arccsc}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .asin(1 / self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Asec: Function {
+//    public let identifier: String = "asec"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return asec(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "asec(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{arcsec}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .acos(1 / self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Acot: Function {
+//    public let identifier: String = "acot"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return acot(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "acot(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{arccot}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        throw SymbolLabError.notApplicable(message: "arccotan is too hard. me done.")
+//    }
+//}
+//
+//public struct Sinh: Function {
+//    public let identifier: String = "sinh"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return sinh(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "sinh(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\sinh(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .sinh(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Cosh: Function {
+//    public let identifier: String = "cosh"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return cosh(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "cosh(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\cosh(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .cosh(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Tanh: Function {
+//    public let identifier: String = "tanh"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return tanh(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "tanh(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\tanh(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .tanh(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Asinh: Function {
+//    public let identifier: String = "asinh"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return asinh(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "asinh(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{arcsinh}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .asinh(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Acosh: Function {
+//    public let identifier: String = "acosh"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return acosh(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "acosh(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{arccosh}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .acosh(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Atanh: Function {
+//    public let identifier: String = "atanh"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return atanh(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "atanh(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{arctanh}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        return try .atanh(self.argument.evaluate(withValues: values))
+//    }
+//}
+//
+//public struct Csch: Function {
+//    public let identifier: String = "csch"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return csch(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "csch(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{csch}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        throw SymbolLabError.notApplicable(message: "IDK acsch")
+//    }
+//}
+//
+//public struct Sech: Function {
+//    public let identifier: String = "sech"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return sech(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "sech(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{sech}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        throw SymbolLabError.notApplicable(message: "IDK asech")
+//    }
+//}
+//
+//public struct Coth: Function {
+//    public let identifier: String = "coth"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return coth(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "coth(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{coth}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        throw SymbolLabError.notApplicable(message: "IDK acot")
+//    }
+//}
+//
+//public struct Acsch: Function {
+//    public let identifier: String = "acsch"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return acsch(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "acsch(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{arccsch}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        throw SymbolLabError.notApplicable(message: "IDK acsch")
+//    }
+//}
+//
+//public struct Asech: Function {
+//    public let identifier: String = "asech"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return asech(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "asech(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{arcsech}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        throw SymbolLabError.notApplicable(message: "IDK asech")
+//    }
+//}
+//
+//public struct Acoth: Function {
+//    public let identifier: String = "acoth"
+//    public let numArguments: Int = 1
+//
+//    // Store the parameters for the node
+//    private var argument: Node
+//
+//    public var symbol: Symbol? {
+//        return acoth(self.argument.symbol)
+//    }
+//
+//    public var description: String {
+//        return "acoth(\(self.argument))"
+//    }
+//
+//    public var latex: String {
+//        return "\\textrm{arccoth}(\(self.argument.latex))"
+//    }
+//
+//    public var variables: Set<String> {
+//        return self.argument.variables
+//    }
+//
+//    public init(_ params: [Node]) {
+//        self.argument = params[0]
+//    }
+//
+//    public init(_ param: Node) {
+//        self.init([param])
+//    }
+//
+//    public func factory(_ params: [Node]) -> Node {
+//        return Self(params)
+//    }
+//
+//    public func svg(using source: SVGSource) -> SVGElement? {
+//        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
+//        guard var argSVG = self.argument.svg(using: source) else { return nil }
+//        argSVG = SVGUtilities.parentheses(argSVG, using: source)
+//        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
+//    }
+//
+//    public func evaluate(withValues values: [String: Double]) throws -> Double {
+//        throw SymbolLabError.notApplicable(message: "IDK acoth")
+//    }
+//}
 
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .asin(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Acos: Function {
-    public let identifier: String = "acos"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return acos(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "acos(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\arccos(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .acos(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Atan: Function {
-    public let identifier: String = "atan"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return atan(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "atan(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\arctan(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .atan(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Csc: Function {
-    public let identifier: String = "csc"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return csc(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "csc(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\csc(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try 1 / .sin(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Sec: Function {
-    public let identifier: String = "sec"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return sec(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "sec(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\sec(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try 1  / .cos(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Cot: Function {
-    public let identifier: String = "cot"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return cot(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "cot(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\cot(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try 1 / .tan(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Acsc: Function {
-    public let identifier: String = "acsc"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return acsc(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "acsc(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{arccsc}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .asin(1 / self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Asec: Function {
-    public let identifier: String = "asec"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return asec(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "asec(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{arcsec}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .acos(1 / self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Acot: Function {
-    public let identifier: String = "acot"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return acot(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "acot(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{arccot}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        throw SymbolLabError.notApplicable(message: "arccotan is too hard. me done.")
-    }
-}
-
-public struct Sinh: Function {
-    public let identifier: String = "sinh"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return sinh(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "sinh(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\sinh(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .sinh(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Cosh: Function {
-    public let identifier: String = "cosh"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return cosh(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "cosh(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\cosh(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .cosh(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Tanh: Function {
-    public let identifier: String = "tanh"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return tanh(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "tanh(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\tanh(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .tanh(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Asinh: Function {
-    public let identifier: String = "asinh"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return asinh(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "asinh(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{arcsinh}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .asinh(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Acosh: Function {
-    public let identifier: String = "acosh"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return acosh(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "acosh(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{arccosh}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .acosh(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Atanh: Function {
-    public let identifier: String = "atanh"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return atanh(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "atanh(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{arctanh}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .atanh(self.argument.evaluate(withValues: values))
-    }
-}
-
-public struct Csch: Function {
-    public let identifier: String = "csch"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return csch(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "csch(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{csch}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        throw SymbolLabError.notApplicable(message: "IDK acsch")
-    }
-}
-
-public struct Sech: Function {
-    public let identifier: String = "sech"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return sech(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "sech(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{sech}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        throw SymbolLabError.notApplicable(message: "IDK asech")
-    }
-}
-
-public struct Coth: Function {
-    public let identifier: String = "coth"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return coth(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "coth(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{coth}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        throw SymbolLabError.notApplicable(message: "IDK acot")
-    }
-}
-
-public struct Acsch: Function {
-    public let identifier: String = "acsch"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return acsch(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "acsch(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{arccsch}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        throw SymbolLabError.notApplicable(message: "IDK acsch")
-    }
-}
-
-public struct Asech: Function {
-    public let identifier: String = "asech"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return asech(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "asech(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{arcsech}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        throw SymbolLabError.notApplicable(message: "IDK asech")
-    }
-}
-
-public struct Acoth: Function {
-    public let identifier: String = "acoth"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    private var argument: Node
-    
-    public var symbol: Symbol? {
-        return acoth(self.argument.symbol)
-    }
-    
-    public var description: String {
-        return "acoth(\(self.argument))"
-    }
-    
-    public var latex: String {
-        return "\\textrm{arccoth}(\(self.argument.latex))"
-    }
-    
-    public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    public init(_ param: Node) {
-        self.init([param])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
-        throw SymbolLabError.notApplicable(message: "IDK acoth")
-    }
-}
-
-public struct Sqrt: Function {
+public class Sqrt: Node, Function {
     public let identifier: String = "sqrt"
     public let numArguments: Int = 1
     
     // Store the parameters for the node
     private var argument: Node
     
-    public var symbol: Symbol? {
-        return sqrt(self.argument.symbol)
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "sqrt(\(self.argument))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         return "\\sqrt{\(self.argument.latex)}"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
     }
 
-    public init(_ param: Node) {
+    public convenience init(_ param: Node) {
         self.init([param])
+    }
+
+    override required public convenience init() {
+        self.init([Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        #warning("sqrt svg is not really implemented yet")
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let param  = self.argument.getSymbol(using: type) else {return nil}
+        return Engine.sqrt(param)
+    }
+
+    override public func svg(using source: SVGSource) -> SVGElement? {
+        // TODO: Actual sqrt symbol for svg
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
+    override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .sqrt(self.argument.evaluate(withValues: values))
     }
 }
 
-public struct Exp: Function {
+public class Exp: Node, Function {
     public let identifier: String = "exp"
     public let numArguments: Int = 1
     
     // Store the parameters for the node
     private var argument: Node
     
-    public var symbol: Symbol? {
-        return exp(self.argument.symbol)
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "exp(\(self.argument))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         return "e^{\(self.argument.latex)}"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
     }
 
-    public init(_ param: Node) {
+    public convenience init(_ param: Node) {
         self.init([param])
+    }
+
+    override required public convenience init() {
+        self.init([Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
-        #warning("exp svg is not really implemented yet")
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let param = self.argument.getSymbol(using: type) else {return nil}
+        return Engine.exp(param)
+    }
+
+    override public func svg(using source: SVGSource) -> SVGElement? {
+        // TODO: Actual exp svg
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
+    override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try  .exp(self.argument.evaluate(withValues: values))
     }
 }
 
-public struct Log: Function {
+public class Log: Node, Function {
     public let identifier: String = "log"
     public let numArguments: Int = 1
     
     // Store the parameters for the node
     private var argument: Node
     
-    public var symbol: Symbol? {
-        return log(self.argument.symbol)
-    }
-    
-    public var description: String {
+    override public var description: String {
         return "log(\(self.argument))"
     }
     
-    public var latex: String {
+    override public var latex: String {
         return "\\log(\(self.argument.latex))"
     }
     
-    public var variables: Set<String> {
+    override public var variables: Set<String> {
         return self.argument.variables
     }
     
-    public init(_ params: [Node]) {
+    required public init(_ params: [Node]) {
         self.argument = params[0]
     }
 
-    public init(_ param: Node) {
+    public convenience init(_ param: Node) {
         self.init([param])
+    }
+
+    override required public convenience init() {
+        self.init([Node()])
     }
     
     public func factory(_ params: [Node]) -> Node {
         return Self(params)
     }
-    
-    public func svg(using source: SVGSource) -> SVGElement? {
+
+    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
+        guard let param = self.argument.getSymbol(using: type) else {return nil}
+        return Engine.log(param)
+    }
+
+    override public func svg(using source: SVGSource) -> SVGElement? {
         guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
         guard var argSVG = self.argument.svg(using: source) else { return nil }
         argSVG = SVGUtilities.parentheses(argSVG, using: source)
         return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
     }
 
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
+    override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .log(self.argument.evaluate(withValues: values))
     }
 }
