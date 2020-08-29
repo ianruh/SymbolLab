@@ -57,6 +57,12 @@ public protocol Operation: Node {
     func factory(_ params: [Node]) -> Node
 }
 
+extension Operation {
+    init(_ params: Node...) {
+        self.init(params)
+    }
+}
+
 //############################ Basic Operations #############################
 
 /// Assign one node to the other.

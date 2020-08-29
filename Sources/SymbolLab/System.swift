@@ -11,9 +11,6 @@ import LASwift
 public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     public typealias ArrayLiteralElement = Node
 
-    // Utility used in some solve functions
-    private static let parser: Parser = Parser()
-
     /// The set of variables involved in the system's equations
     public var variables: Set<String> {
         var variables: Set<String> = []
@@ -72,9 +69,15 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     /// - Returns: A vector of solutions to the system, ordered as is the system's veriableSequence.
     /// - Throws: An error for many reasons. Look at error message for details.
     public func solve<Engine: SymbolicMathEngine>(guess: [String: Double] = [:], threshold: Double = 0.0001, maxIterations: Int = 1000, using backend: Engine.Type) throws -> (values: [String: Double], error: Double, iterations: Int) {
+        // Basic constraint check
         guard self.variables.count == self.equations.count else {
             throw SymbolLabError.misc("Unconstrained system.")
         }
+        // Reformat equations
+        let originalEquations = self.equations
+        self.equations = self.formatAssignments(self.equations)
+        defer {self.equations = originalEquations} // Restore the original set
+
         // Get the jacobian of the system
         guard let jacobian: Jacobian<Engine> = self.getJacobian() else {
             throw SymbolLabError.misc("Could not calculate Jacobian")
@@ -239,7 +242,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         for point in points {
             // Add a temporary constraint for the current point
             // TODO: Don't construct the node by parsing. Fix this when you have math operators on nodes done
-            self.equations.append(System.parser.parse(cString: "\(variable)-\(point)")!)
+            self.equations.append(Variable(variable) ~ Decimal(floatLiteral: point))
             let (val, err, n) = try self.solve(guess: guesses, threshold: threshold, maxIterations: maxIterations, using: backend)
             values.append(val)
             errors.append(err)
@@ -280,6 +283,20 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             map[self.variableSequence[i]] = vec[i]
         }
         return try self.eval(map)
+    }
+
+    /// Reformat a set of equations to be equal to 0
+    ///
+    /// - Parameter equations: Equations to reformat
+    /// - Returns: The reformated equations.
+    private func formatAssignments(_ equations: [Node]) -> [Node] {
+        var copy = equations
+        for i in 0..<copy.count {
+            if let assignment = copy[i] as? Assign {
+                copy[i] = assignment.left - assignment.right
+            }
+        }
+        return copy
     }
 }
 

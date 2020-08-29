@@ -11,33 +11,18 @@ import SwiftPlot
 import SVGRenderer
 import SymEngineBackend
 
-let parser = Parser()
-var genOptions = GeneratorOptions()
-genOptions.maxDepth = 3
-genOptions.operations.assignments.maxChain = 0
 
-genOptions.operations.list = [
-    Decimal(),
-    Negative(),
-    Add(),
-    Subtract(),
-    Multiply(),
-    Divide(),
-    Power(),
-    Parentheses(),
-    Sin(),
-    Cos(),
-    Tan(),
-    Derivative(),
-    Log(),
-]
+let ve: Variable = "ve"
+let mf: Variable = "mf"
+let deltaV: Variable = "deltaV"
+let mz: Variable = "mz"
+let mr: Variable = "mr"
 
-// Define the system
 let system: System = [
-    parser.parse(cString: "ve-2000")!, // m/s
-    parser.parse(cString: "mf-5000")!, // kg
-    parser.parse(cString: "deltaV-ve*log(mz/mf)")!,
-    parser.parse(cString: "mr-(mz/mf)")!,
+    ve ~ 2000,
+    mf ~ 5000,
+    deltaV ~ ve*Log(mz/mf),
+    mr ~ mz/mf
 ]
 print(system)
 
