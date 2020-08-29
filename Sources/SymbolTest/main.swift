@@ -9,6 +9,7 @@ import Foundation
 import SymbolLab
 import SwiftPlot
 import SVGRenderer
+import SymEngineBackend
 
 let parser = Parser()
 var genOptions = GeneratorOptions()
@@ -16,19 +17,19 @@ genOptions.maxDepth = 3
 genOptions.operations.assignments.maxChain = 0
 
 genOptions.operations.list = [
-    Decimal([P,P]),
-    Negative([P]),
-    Add([P,P]),
-    Subtract([P,P]),
-    Multiply([P,P]),
-    Divide([P,P]),
-    Power([P,P]),
-    Parentheses([P]),
-    Sin([P]),
-    Cos([P]),
-    Tan([P]),
-    Derivative([P,P]),
-    Log([P]),
+    Decimal(),
+    Negative(),
+    Add(),
+    Subtract(),
+    Multiply(),
+    Divide(),
+    Power(),
+    Parentheses(),
+    Sin(),
+    Cos(),
+    Tan(),
+    Derivative(),
+    Log(),
 ]
 
 // Define the system
@@ -43,7 +44,7 @@ print(system)
 let mzVals = Array(stride(from: 5000, through: 90000.0, by: 100))
 
 do {
-    let (values, errors, iterations) = try system.solve(at: ["mz": mzVals])
+    let (values, errors, iterations) = try system.solve(at: ["mz": mzVals], using: SymEngineBackend.self)
     let deltaVVals = values.map({$0["deltaV"]!})
 
     var svg_renderer: SVGRenderer = SVGRenderer()

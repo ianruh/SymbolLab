@@ -6,7 +6,7 @@
 //
 
 /**
-Errors that can be thrown by SymEngine
+Errors that can be thrown by SymbolLab
 */
 public enum SymbolLabError: Error {
     case noValue(forVariable: String)

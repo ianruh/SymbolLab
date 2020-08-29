@@ -77,18 +77,18 @@ var genOptions = GeneratorOptions()
 genOptions.maxDepth = treeDepth
 genOptions.operations.assignments.maxChain = 0
 genOptions.operations.list = [
-    Decimal([P,P]),
-    Negative([P]),
-    Add([P,P]),
-    Subtract([P,P]),
-    Multiply([P,P]),
-    Divide([P,P]),
-    Power([P,P]),
-    Parentheses([P]),
-    Sin([P]),
-    Cos([P]),
-    Tan([P]),
-    AbsoluteValue([P])
+    Decimal(),
+    Negative(),
+    Add(),
+    Subtract(),
+    Multiply(),
+    Divide(),
+    Power(),
+    Parentheses(),
+    Sin(),
+    Cos(),
+    Tan(),
+    AbsoluteValue()
 ]
 
 var nodes: [Node] = []

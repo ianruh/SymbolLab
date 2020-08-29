@@ -6,7 +6,6 @@
 //
 // Extensions of types not defined in this repo
 
-import SymEngine
 import LASwift
 import RealModule
 
@@ -102,11 +101,24 @@ extension Set {
 }
 
 extension Double {
-    /**
-     Get a sixe decimal accuracy number
-     */
+    /// Get a sixe decimal accuracy number
     public var sixAc: String {
         return String(format: "%0.6f", self)
+    }
+
+    /// Get whole value of double
+    public var whole: Int {
+        var d = self
+        d.round(.towardZero)
+        return Int(d)
+    }
+
+    /// Get Integer of fractional value
+    public var frac: Int {
+        var str = String(self)
+        var ind = str.index(of: ".")!
+        str.formIndex(after: &ind)
+        return Int(str.substring(from: ind))!
     }
 }
 
@@ -121,26 +133,6 @@ extension Collection where Element: Collection {
             str += "]\n"
         }
         return str
-    }
-}
-
-extension SymEngine.Symbol {
-    /**
-    Make some changes to the string is a dialect I like here
-
-    Changes:
-
-    - Change '**' for power to '^'
-    - Change leading '-' to '-1*'
-    */
-    public var symbolLabString: String {
-        var desc = self.description
-        desc = desc.replacingOccurrences(of: "**", with: "^")
-        if(desc.first == "-") {
-            desc.remove(at: desc.startIndex)
-            desc = "-1*\(desc)"
-        }
-        return desc
     }
 }
 

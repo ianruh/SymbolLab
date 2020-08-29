@@ -5,34 +5,39 @@
 //  Created by Ian Ruh on 8/14/20.
 //
 
-public protocol SymbolicMathEngine  {
-    associatedtype SymbolType
+public protocol SymbolicMathEngine {
+    associatedtype Symbol
 
-    // Construct node
-    var node: Node {get}
-    
-    // Factories
-    func new(_ real: Int, _ complex: Int) -> SymbolType?
-    func new(_ real: Double, _ complex: Double) -> SymbolType?
-    func new(_ variable: String) -> SymbolType?
-    
+    // Utility
+    static func constructNode(from symbol: Symbol) -> Node?
+
+    static func new(_ integer: Int) -> Symbol
+    static func new(_ double: Double) -> Symbol
+    static func new(_ variable: String) -> Symbol
+
+    // Misc
+    static func expand(_ param: Symbol) -> Symbol?
+    static func abs(_ param: Symbol) -> Symbol?
+    static func erf(_ param: Symbol) -> Symbol?
+
     // SymbolType Operations
-    func add(_ left: SymbolType?, _ right: SymbolType?) -> SymbolType?
-    func subtract(_ left: SymbolType?, _ right: SymbolType?) -> SymbolType?
-    func divide(_ left: SymbolType?, _ right: SymbolType?) -> SymbolType?
-    func multiply(_ left: SymbolType?, _ right: SymbolType?) -> SymbolType?
-    func negate(_ item: SymbolType?) -> SymbolType?
-    func exponentiate(_ left: SymbolType?, _ right: SymbolType?) -> SymbolType?
+    static func add(_ lhs: Symbol, _ rhs: Symbol) -> Symbol
+    static func subtract(_ lhs: Symbol, _ rhs: Symbol) -> Symbol
+    static func divide(_ lhs: Symbol, _ rhs: Symbol) -> Symbol
+    static func multiply(_ lhs: Symbol, _ rhs: Symbol) -> Symbol
+    static func negate(_ item: Symbol) -> Symbol
+    static func exponentiate(_ lhs: Symbol, _ rhs: Symbol) -> Symbol
     
     // Calc
-    func der(of item: SymbolType?, withRespectTo: SymbolType?) -> SymbolType?
+    static func diff(of item: Symbol, withRespectTo: Symbol) -> Symbol?
     
     // Trig
-    func sin(_ term: SymbolType?) -> SymbolType?
-    func cos(_ term: SymbolType?) -> SymbolType?
-    func tan(_ term: SymbolType?) -> SymbolType?
+    static func sin(_ term: Symbol) -> Symbol?
+    static func cos(_ term: Symbol) -> Symbol?
+    static func tan(_ term: Symbol) -> Symbol?
     
     // Other
-    func log(_ term: SymbolType?) -> SymbolType?
-    func sqrt(_ term: SymbolType?) -> SymbolType?
+    static func log(_ term: Symbol) -> Symbol?
+    static func sqrt(_ term: Symbol) -> Symbol?
+    static func exp(_ term: Symbol) -> Symbol?
 }
