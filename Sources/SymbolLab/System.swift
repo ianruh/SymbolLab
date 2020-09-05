@@ -73,6 +73,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         guard self.variables.count == self.equations.count else {
             throw SymbolLabError.misc("Unconstrained system.")
         }
+
         // Reformat equations
         let originalEquations = self.equations
         self.equations = self.formatAssignments(self.equations)
@@ -82,17 +83,14 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         guard let jacobian: Jacobian<Engine> = self.getJacobian() else {
             throw SymbolLabError.misc("Could not calculate Jacobian")
         }
+
         // Root vector
         let zero_vec = Vector(repeating: 0, count: self.equations.count)
         // Establish the first guess
         var x_current: Vector = []
         for v in self.variableSequence {
-            if(guess.count != 0) {
-                if(guess.keys.contains(v)) {
-                    x_current.append(guess[v]!)
-                } else {
-                    throw SymbolLabError.misc("Guess not provided for variable '\(v)'")
-                }
+            if(guess.keys.contains(v)) {
+                x_current.append(guess[v]!)
             } else {
                 x_current.append(1)
             }
@@ -113,14 +111,13 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             } catch {
                 if(shifted < 3) {
                     for i in 0..<x_current.count {
-                        // Alleviate the illconditioning by adding some noise
+                        // Alleviate the illconditioning by adding some noise (this is a magic amount of noise FYI)
                         x_current[i] += Double.random(in: -0.2...0.2)
                     }
                     shifted += 1
-                    count += 1
                     continue
                 } else {
-                    throw SymbolLabError.misc("System seems to be illconditioned somehow.")
+                    throw SymbolLabError.misc("System seems to be illconditioned.")
                 }
             }
             x_current = x_current + y

@@ -9,6 +9,9 @@ public class Node: CustomStringConvertible {
 
     //------------------------ Properties ------------------------
 
+    /// The node's unqie identifier
+    lazy public var id: Id = Id()
+
     /// A string representation of the node. This should be overridden.
     public var description: String {
         preconditionFailure("description should be overridden")
@@ -59,6 +62,33 @@ public class Node: CustomStringConvertible {
     public func evaluate(withValues values: [String: Double]) throws -> Double {
         preconditionFailure("This method must be overridden")
     }
+
+    /// Get the count of how many of the given elements are in the node.
+    ///
+    /// - Parameter nodeType: Type interested in
+    /// - Returns: The number found.
+    public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        preconditionFailure("This method must be overridden")
+    }
+
+    /// Replace the node with the given id with another node.
+    ///
+    /// - Parameters:
+    ///   - id: The ID of the node to be replaced.
+    ///   - replacement: The replacement node.
+    /// - Returns: Returns true if the node was replaced, and false otherwise.
+    /// - Throws: If the node cannot be replaced.
+    public func replace(id: Id, with replacement: Node) throws -> Bool {
+        preconditionFailure("This method must be overridden")
+    }
+
+    /// Get the node with the given id.
+    ///
+    /// - Parameter id: Id of the node to get.
+    /// - Returns: The node with the given id, if it exists in the tree.
+    public func getNode(withId id: Id) -> Node? {
+        preconditionFailure("This method must be overridden")
+    }
 }
 
 public class Number: Node, ExpressibleByIntegerLiteral {
@@ -101,6 +131,29 @@ public class Number: Node, ExpressibleByIntegerLiteral {
     
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return Double(self.value)
+    }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        if(nodeType == Number.self) {
+            return [self.id]
+        } else {
+            return []
+        }
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+        // There is nothing to replace, so just return false.
+        return false;
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return nil
     }
 }
 
@@ -147,5 +200,28 @@ public class Variable: Node, ExpressibleByStringLiteral {
             throw SymbolLabError.noValue(forVariable: self.string)
         }
         return values[self.string]!
+    }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        if(nodeType == Variable.self) {
+            return [self.id]
+        } else {
+            return []
+        }
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+        // There is nothing to replace, so just return false.
+        return false;
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return nil
     }
 }

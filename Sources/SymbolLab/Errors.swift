@@ -13,5 +13,6 @@ public enum SymbolLabError: Error {
     case notApplicable(message: String)
     case noVariable(forValue: String)
     case badAssignment(forEquation: String)
+    case cannotReplaceNode(_ msg: String)
     case misc(_ message: String)
 }

@@ -24,7 +24,6 @@ let system: System = [
     deltaV ~ ve*Log(mz/mf),
     mr ~ mz/mf
 ]
-print(system)
 
 let mzVals = Array(stride(from: 5000, through: 90000.0, by: 100))
 
