@@ -11,8 +11,8 @@ let package = Package(
             name: "SymbolLab",
             targets: ["SymbolLab"]),
         .executable(
-            name:"symbolTest",
-            targets: ["SymbolTest"]),
+            name:"examples",
+            targets: ["Examples"]),
         .library(
              name:"databaseUtility",
              targets: ["DatabaseUtility"]),
@@ -47,7 +47,7 @@ let package = Package(
                 "LASwift"
         ]),
         .target(
-            name: "SymbolTest",
+            name: "Examples",
             dependencies: ["SymbolLab",
                            .product(name: "SwiftPlot", package: "swiftplot"),
                            .product(name: "SVGRenderer", package: "swiftplot"),
