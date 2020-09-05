@@ -159,8 +159,8 @@ public class Derivative: Node, Function {
     public let numArguments: Int = 2
     
     // Store the parameters for the node
-    private var diffOf: Node
-    private var withRespectTo: Node
+    internal var diffOf: Node
+    internal var withRespectTo: Node
     
     override public var description: String {
         return "d(\(self.diffOf),\(self.withRespectTo))"
@@ -185,6 +185,10 @@ public class Derivative: Node, Function {
     required public init(_ params: [Node]) {
         self.diffOf = params[0]
         self.withRespectTo = params[1]
+    }
+
+    public convenience init(of: Node, wrt: Node) {
+        self.init([of, wrt])
     }
 
     override required public convenience init() {

@@ -32,6 +32,11 @@ public class Node: CustomStringConvertible {
         return self as? Number != nil || self as? Variable != nil
     }
 
+    /// Dertermine if the node is a variable
+    public var isVariable: Bool {
+        return self as? Variable != nil
+    }
+
     /// Determine if the node is an operation
     public var isOperation: Bool {
         return self as? Operation != nil
@@ -40,6 +45,20 @@ public class Node: CustomStringConvertible {
     /// Determine is the node is a function
     public var isFunction: Bool {
         return self as? Function != nil
+    }
+
+    /// Determin if the node is and ODE. If so, return a tuple of the independent and dependent variable.
+    public var isODE: (dep: Variable, ind: Variable, derId: Id)? {
+        let ids = self.contains(nodeType: Derivative.self)
+        // Need one derivative
+        if(ids.count == 1) {
+            // Check the independent and dependent variables are just variables
+            guard let der = self.getNode(withId: ids[0]) as? Derivative else {fatalError("Something weird happened")}
+            guard let dep = der.diffOf as? Variable else {return nil}
+            guard let ind = der.withRespectTo as? Variable else {return nil}
+            return (dep: dep, ind: ind, derId: ids[0])
+        }
+        return nil
     }
 
     //------------------------ Functions ------------------------
@@ -161,6 +180,7 @@ public class Variable: Node, ExpressibleByStringLiteral {
     public typealias StringLiteralType = String
 
     public var string: String
+    public var initialValue: Double?
     
     override public var description: String {
         return self.string
@@ -173,13 +193,23 @@ public class Variable: Node, ExpressibleByStringLiteral {
     override public var variables: Set<String> {
         return [self.string]
     }
+
+    public static func ==(_ lhs: Variable, _ rhs: Variable) -> Bool {
+        return lhs.string == rhs.string && lhs.initialValue == rhs.initialValue
+    }
     
     public required init(stringLiteral str: String) {
         self.string = str
     }
 
-    public convenience init(_ str: String) {
+    /// Initialize a variable using a string. The initial value is only used if the variable is the dependent variable in an ODE.
+    ///
+    /// - Parameters:
+    ///   - str: String representation of the variable.
+    ///   - initialValue: Initial value of the variable in an ODE. Won't be used and doesn't need to be specified if it is not the independent variable in an ODE.
+    public convenience init(_ str: String, initialValue: Double? = nil) {
         self.init(stringLiteral: str)
+        self.initialValue = initialValue
     }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {

@@ -195,11 +195,11 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     }
 
 
-    ///Solve the system at the given values. Currently, only support for one variable, but that is mostly because the
+    /// Solve the system at the given values. Currently, only support for one variable, but that is mostly because the
     /// plotting library only supports 2d at the moment.
     ///
     /// - Parameters:
-    ///   - at: A dictionart associating a variable to a set of values. e.g. `["x": [0.0, 0.5, 1.0, 1.5, 2.0]]`
+    ///   - at: A dictionary associating a variable to a set of values. e.g. `["x": [0.0, 0.5, 1.0, 1.5, 2.0]]`
     ///   - initialGuess: A set of initial guesses for the other variables at the first element of the values.
     ///   - threshold:
     ///   - maxIterations:
@@ -223,8 +223,10 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             throw SymbolLabError.misc("Currently solve only can evaluate at one set of points.")
         }
         guard self.equations.count+1 == self.variables.count else {
-            throw SymbolLabError.misc("Unconstrained system.")
+            throw SymbolLabError.misc("Under constrained system.")
         }
+
+        // We've got a normal system from here on
 
         let (variable, points) = pointsDict.first! // We checked there will be exactly one
 
@@ -233,6 +235,26 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             if(!guesses.keys.contains(v)) {
                 guesses[v] = 1
             }
+        }
+
+        // Handle ODEs by passing them off to odeSolve
+        var normalEqs: [Node] = []
+        var odes: [(node: Node, dep: Variable, ind: Variable, derId: Id)] = []
+        for eq in self.equations {
+            if let (dep, ind, derId) = eq.isODE {
+                odes.append((node: eq, dep: dep, ind: ind, derId: derId))
+            } else {
+                normalEqs.append(eq)
+            }
+        }
+        if(odes.count > 0) {
+            return try System.odeSolve(normalEqs: normalEqs,
+                    odes: odes,
+                    at: pointsDict,
+                    initialGuess: guesses,
+                    threshold: threshold,
+                    maxIterations: maxIterations,
+                    using: backend)
         }
 
         // Start at the first element
@@ -251,6 +273,107 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         }
 
         return (values, errors, iterations)
+    }
+
+    /// Solve a system of or container ODEs
+    ///
+    /// - Parameters:
+    ///   - normalEqs:
+    ///   - odes:
+    ///   - pointsDict:
+    ///   - initialGuess: Must be complete already
+    ///   - threshold:
+    ///   - maxIterations:
+    ///   - backend:
+    /// - Returns:
+    /// - Throws:
+    internal static func odeSolve<Engine: SymbolicMathEngine>(normalEqs: [Node],
+                                                  odes: [(node: Node, dep: Variable, ind: Variable, derId: Id)],
+                                                  at pointsDict: [String: [Double]],
+                                                  initialGuess: [String: Double] = [:],
+                                                  threshold: Double = 0.0001,
+                                                  maxIterations: Int = 1000,
+                                                  using backend: Engine.Type) throws -> (values: [[String: Double]],
+                                                                                         error: [Double],
+                                                                                         iterations: [Int]) {
+        // Verify that all the independent ODE variables are the same
+        let indepedentVar = odes[0].ind
+        for ode in odes {
+            guard ode.ind == indepedentVar else {
+                throw SymbolLabError.multipleIndependentVariables("cannot have both '\(indepedentVar)' and '\(ode.ind)'")
+            }
+        }
+        // Verify that the points given are for the independent variable
+        guard let points = pointsDict[indepedentVar.string] else {
+            throw SymbolLabError.noValue(forVariable: "\(indepedentVar)")
+        }
+
+        // Construct normal system
+        let normalSystem = System(normalEqs)
+
+        // Dict to store the current values of all of dependent variables in the ODE
+        var currentDeps: [String: Double] = [:]
+        for ode in odes {
+            // Verify an initial value is given for all the indepedent ODE variables
+            guard let initv = ode.dep.initialValue else {
+                throw SymbolLabError.noValue(forVariable: "\(ode.dep) (no intial value given)")
+            }
+            currentDeps[ode.dep.string] = initv
+        }
+
+        // Replace all the derivatives with the new variables
+        var newODEs: [(node: Node, dep: Variable, ind: Variable, newVar: Variable)] = []
+        for ode in odes {
+            // TODO: This is a stupid way to make a unique string. Probablyu fix when everything is converted from string to variable
+            let newName = "\(ode.dep.string)d\(ode.ind.string)"
+            let newVar = Variable(newName)
+            try ode.node.replace(id: ode.derId, with: newVar)
+            newODEs.append((node: ode.node, dep: ode.dep, ind: ode.ind, newVar: newVar))
+        }
+
+        // Construct the ODE system
+        var odeSysArray: [Node] = []
+        for ode in newODEs {
+            odeSysArray.append(ode.node)
+        }
+        let odeSystem = System(odeSysArray)
+
+        // Storage for values, errors, and iterations
+        var values: [[String:Double]] = []
+        var errors: [Double] = []
+        var iterations: [Int] = []
+
+        // Loop through all the points
+        for i in 0..<points.count-1 {
+            // Construct the current constraints system
+            var constraints: [Node] = []
+            for ode in newODEs {
+                constraints.append(ode.dep ~ Decimal(floatLiteral: currentDeps[ode.dep.string]!))
+            }
+
+            // Solve the system
+            var wholeSystem = normalSystem + odeSystem + System(constraints)
+            let (val, err, n) = try wholeSystem.solve(guess: initialGuess, threshold: threshold, maxIterations: maxIterations, using: backend)
+
+            // Update each dependent variable
+            let h = points[i+1] - points[i]
+            for ode in newODEs {
+                let next = currentDeps[ode.dep.string]! + h*val[ode.newVar.string]!
+                currentDeps[ode.dep.string] = next
+            }
+
+            // Store the values
+            errors.append(err)
+            iterations.append(n)
+            var iterValues: [String: Double] = [:]
+            for key in val.keys {
+                if(!newODEs.map({$0.newVar.string}).contains(key)) {
+                    iterValues[key] = val[key]
+                }
+            }
+            values.append(iterValues)
+        }
+        return (values: values, error: errors, iterations: iterations)
     }
 
     /// Evaluate the system at the point given by the dictionary of variables and values.
@@ -294,6 +417,18 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             }
         }
         return copy
+    }
+
+    /// Compose two systems.
+    ///
+    /// - Parameters:
+    ///   - lhs:
+    ///   - rhs:
+    /// - Returns: A new system with the constraints from both
+    public static func +(_ lhs: System, _ rhs: System) -> System {
+        var arr = lhs.equations
+        arr.append(contentsOf: rhs.equations)
+        return System(arr)
     }
 }
 
