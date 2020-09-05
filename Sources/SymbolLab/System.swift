@@ -267,7 +267,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             errors.append(err)
             iterations.append(n)
             // Remove the constraint we just added
-            self.equations.popLast()
+            _ = self.equations.popLast()
             // Set the guesses to our current solutions (should be closer than 1,1,1,1,...)
             guesses = val
         }
@@ -327,7 +327,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             // TODO: This is a stupid way to make a unique string. Probablyu fix when everything is converted from string to variable
             let newName = "\(ode.dep.string)d\(ode.ind.string)"
             let newVar = Variable(newName)
-            try ode.node.replace(id: ode.derId, with: newVar)
+            _ = try ode.node.replace(id: ode.derId, with: newVar) // Will always return true, so we can ignore
             newODEs.append((node: ode.node, dep: ode.dep, ind: ode.ind, newVar: newVar))
         }
 
@@ -352,7 +352,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             }
 
             // Solve the system
-            var wholeSystem = normalSystem + odeSystem + System(constraints)
+            let wholeSystem = normalSystem + odeSystem + System(constraints)
             let (val, err, n) = try wholeSystem.solve(guess: initialGuess, threshold: threshold, maxIterations: maxIterations, using: backend)
 
             // Update each dependent variable
@@ -461,7 +461,6 @@ public class Jacobian<Engine: SymbolicMathEngine>: CustomStringConvertible {
     }
     
     public init?(system: System) {
-        let parser = Parser()
         self.system = system
         let variables = system.variableSequence
         self.elements = []
