@@ -18,6 +18,7 @@ precedencegroup ExponentiationPrecedence {
 
 infix operator ** : ExponentiationPrecedence
 infix operator ~ : AssignmentPrecedence
+infix operator ≈ : AssignmentPrecedence
 
 //------------------------- Operations --------------------
 
@@ -150,5 +151,21 @@ public func ~(_ lhs: Node, _ rhs: Decimal) -> Node {
     return Assign([lhs, rhs])
 }
 public func ~(_ lhs: Decimal, _ rhs: Node) -> Node {
+    return Assign([lhs, rhs])
+}
+
+public func ≈(_ lhs: Node, _ rhs: Node) -> Node {
+    return Assign([lhs, rhs])
+}
+public func ≈(_ lhs: Number, _ rhs: Node) -> Node {
+    return Assign([lhs, rhs])
+}
+public func ≈(_ lhs: Node, _ rhs: Number) -> Node {
+    return Assign([lhs, rhs])
+}
+public func ≈(_ lhs: Node, _ rhs: Decimal) -> Node {
+    return Assign([lhs, rhs])
+}
+public func ≈(_ lhs: Decimal, _ rhs: Node) -> Node {
     return Assign([lhs, rhs])
 }

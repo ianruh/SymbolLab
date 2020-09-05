@@ -121,6 +121,37 @@ public class Parentheses: Node, Function {
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.param.evaluate(withValues: values)
     }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == Parentheses.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.param.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.param.id == id) {
+            self.param = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.param.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return self.param.getNode(withId: id)
+    }
 }
 
 public class Derivative: Node, Function {
@@ -128,8 +159,8 @@ public class Derivative: Node, Function {
     public let numArguments: Int = 2
     
     // Store the parameters for the node
-    private var diffOf: Node
-    private var withRespectTo: Node
+    internal var diffOf: Node
+    internal var withRespectTo: Node
     
     override public var description: String {
         return "d(\(self.diffOf),\(self.withRespectTo))"
@@ -154,6 +185,10 @@ public class Derivative: Node, Function {
     required public init(_ params: [Node]) {
         self.diffOf = params[0]
         self.withRespectTo = params[1]
+    }
+
+    public convenience init(of: Node, wrt: Node) {
+        self.init([of, wrt])
     }
 
     override required public convenience init() {
@@ -237,6 +272,46 @@ public class Derivative: Node, Function {
 
         return try (self.diffOf.evaluate(withValues: x_forward) - self.diffOf.evaluate(withValues: x_back)) / (2*h)
     }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == Derivative.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.withRespectTo.contains(nodeType: nodeType))
+        ids.append(contentsOf: self.diffOf.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.diffOf.id == id) {
+            self.diffOf = replacement
+            return true
+        } else if(self.withRespectTo.id == id) {
+            self.withRespectTo = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.diffOf.replace(id: id, with: replacement) || self.withRespectTo.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+
+        if let node = self.diffOf.getNode(withId: id) {
+            return node
+        } else {
+            return self.withRespectTo.getNode(withId: id)
+        }
+    }
 }
 
 public class Integral: Node, Function {
@@ -298,6 +373,60 @@ public class Integral: Node, Function {
         // TODO: Numerical integration
         throw SymbolLabError.notApplicable(message: "Can't evaluate integrals")
     }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == Integral.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.integrand.contains(nodeType: nodeType))
+        ids.append(contentsOf: self.withRespectTo.contains(nodeType: nodeType))
+        ids.append(contentsOf: self.lowerBound.contains(nodeType: nodeType))
+        ids.append(contentsOf: self.upperBound.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.integrand.id == id) {
+            self.integrand = replacement
+            return true
+        } else if(self.withRespectTo.id == id) {
+            self.withRespectTo = replacement
+            return true
+        } else if(self.lowerBound.id == id) {
+            self.lowerBound = replacement
+            return true
+        } else if(self.upperBound.id == id) {
+            self.upperBound = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.integrand.replace(id: id, with: replacement) ||
+                self.withRespectTo.replace(id: id, with: replacement) ||
+                self.lowerBound.replace(id: id, with: replacement) ||
+                self.upperBound.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        if let node = self.integrand.getNode(withId: id) {
+            return node
+        } else if let node = self.withRespectTo.getNode(withId: id) {
+            return node
+        } else if let node = self.lowerBound.getNode(withId: id) {
+            return node
+        } else {
+            return self.upperBound.getNode(withId: id)
+        }
+    }
 }
 
 public class Expand: Node, Function {
@@ -346,6 +475,37 @@ public class Expand: Node, Function {
     
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.argument.evaluate(withValues: values)
+    }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == Expand.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.argument.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.argument.id == id) {
+            self.argument = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.argument.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return self.argument.getNode(withId: id)
     }
 }
 
@@ -396,6 +556,37 @@ public class AbsoluteValue: Node, Function {
         let val = try self.argument.evaluate(withValues: values)
         return val > 0 ? val: -1*val
     }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == AbsoluteValue.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.argument.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.argument.id == id) {
+            self.argument = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.argument.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return self.argument.getNode(withId: id)
+    }
 }
 
 public class ErrorFunction: Node, Function {
@@ -443,6 +634,37 @@ public class ErrorFunction: Node, Function {
 
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         throw SymbolLabError.notApplicable(message: "erf not implemneted yet")
+    }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == ErrorFunction.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.argument.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.argument.id == id) {
+            self.argument = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.argument.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return self.argument.getNode(withId: id)
     }
 }
 
@@ -496,6 +718,37 @@ public class Sin: Node, Function {
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .sin(self.argument.evaluate(withValues: values))
     }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == Sin.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.argument.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.argument.id == id) {
+            self.argument = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.argument.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return self.argument.getNode(withId: id)
+    }
 }
 
 public class Cos: Node, Function {
@@ -548,6 +801,37 @@ public class Cos: Node, Function {
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .cos(self.argument.evaluate(withValues: values))
     }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == Cos.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.argument.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.argument.id == id) {
+            self.argument = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.argument.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return self.argument.getNode(withId: id)
+    }
 }
 
 public class Tan: Node, Function {
@@ -599,6 +883,37 @@ public class Tan: Node, Function {
 
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .tan(self.argument.evaluate(withValues: values))
+    }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == Tan.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.argument.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.argument.id == id) {
+            self.argument = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.argument.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return self.argument.getNode(withId: id)
     }
 }
 
@@ -1640,6 +1955,37 @@ public class Sqrt: Node, Function {
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .sqrt(self.argument.evaluate(withValues: values))
     }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == Sqrt.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.argument.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.argument.id == id) {
+            self.argument = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.argument.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return self.argument.getNode(withId: id)
+    }
 }
 
 public class Exp: Node, Function {
@@ -1693,6 +2039,37 @@ public class Exp: Node, Function {
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try  .exp(self.argument.evaluate(withValues: values))
     }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == Exp.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.argument.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.argument.id == id) {
+            self.argument = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.argument.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return self.argument.getNode(withId: id)
+    }
 }
 
 public class Log: Node, Function {
@@ -1744,5 +2121,36 @@ public class Log: Node, Function {
 
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .log(self.argument.evaluate(withValues: values))
+    }
+
+    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
+        var ids: [Id] = []
+        if(nodeType == Log.self) {
+            ids.append(self.id)
+        }
+        ids.append(contentsOf: self.argument.contains(nodeType: nodeType))
+        return ids
+    }
+
+    public override func replace(id: Id, with replacement: Node) throws -> Bool {
+        guard id != self.id else {
+            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        }
+
+        // Replace children
+        if(self.argument.id == id) {
+            self.argument = replacement
+            return true
+        }
+
+        // Recursively(ish) search children
+        return try self.argument.replace(id: id, with: replacement)
+    }
+
+    public override func getNode(withId id: Id) -> Node? {
+        if(self.id == id) {
+            return self
+        }
+        return self.argument.getNode(withId: id)
     }
 }
