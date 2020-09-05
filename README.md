@@ -113,3 +113,5 @@ Not if you value your job.
   This would make modeling of more complex physical systems much easier.
 
 - Get LASwift to support generic BLAS implentations rather than just Accelerate.
+
+- Add units to variables and numbers to check the dimensionality of equations.
