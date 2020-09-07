@@ -28,8 +28,8 @@ The `Variable` type declares each variable we are going to use in the system. Fo
 ```swift
 let system: System = [
     ff ≈ -1.0 * b*v,                                        // Damping force
-    fs ≈ -0.5 * (k*x)/m,                                    // Spring force
-    Derivative(of: v, wrt: t) ≈ fs + ff,
+    fs ≈ -0.5 * (k*x),                                      // Spring force
+    Derivative(of: v, wrt: t) ≈ (fs + ff)/m,
     Derivative(of: x, wrt: t) ≈ v
 ]
 ```
