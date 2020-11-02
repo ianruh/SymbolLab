@@ -69,8 +69,8 @@
         "repositoryURL": "https://github.com/apple/swift-numerics",
         "state": {
           "branch": null,
-          "revision": "3d7462a834b58b10b1af4b1a1e0eeb784835681b",
-          "version": "0.0.7"
+          "revision": "6b24333510e9044cf4716a07bed65eeed6bc6393",
+          "version": "0.0.8"
         }
       },
       {
@@ -84,10 +84,10 @@
       },
       {
         "package": "SymEngine",
-        "repositoryURL": "/Users/ianruh/Dev/SymEngine",
+        "repositoryURL": "https://github.com/ianruh/SymEngine.swift",
         "state": {
           "branch": null,
-          "revision": "2c4a407f4058a50668ce67f0b6f99a4cc970fde2",
+          "revision": "a0d9bc530d7d5a104ce69308d1c165fa3af0e5f2",
           "version": "0.0.2"
         }
       }

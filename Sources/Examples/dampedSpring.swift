@@ -1,6 +1,5 @@
 import SymbolLab
-import SwiftPlot
-import SVGRenderer
+import PythonKit
 import SymEngineBackend
 
 func dampedMassSpring() {
@@ -23,6 +22,9 @@ func dampedMassSpring() {
     var tVals = Array(stride(from: 0.0, through: 20.0, by: 0.01)) // Time values to use
 
     do {
+        let plt = try Python.import("matplotlib.pyplot")
+        let np = try Python.import("numpy")
+
         // Solve the system and extract the position and velocity
         let (values, errors, iterations) = try system.solve(at: ["t": tVals], using: SymEngineBackend.self)
         var xVals = values.map({$0["x"]!})
@@ -30,16 +32,13 @@ func dampedMassSpring() {
 
         tVals.popLast() // xVals and vVals has one less element than tVals
 
-        var svg_renderer: SVGRenderer = SVGRenderer()
-        var lineGraph = LineGraph<Double,Double>(enablePrimaryAxisGrid: true)
-        lineGraph.addSeries(tVals, xVals, label: "Mass Position", color: .lightBlue)
-        lineGraph.addSeries(tVals, vVals, label: "Mass Velocity", color: .orange)
-        lineGraph.plotTitle.title = "Damped Mass on Spring"
-        lineGraph.plotLabel.xLabel = "Time (s)"
-        lineGraph.plotLabel.yLabel = "Position (m)"
-        lineGraph.plotLabel.y2Label = "Velocity (m/s)"
-        lineGraph.plotLineThickness = 3.0
-        try lineGraph.drawGraphAndOutput(fileName: "/Users/ianruh/Downloads/dampedspring", renderer: svg_renderer)
+        let xarr = np.array(xVals)
+        let varr = np.array(vVals)
+
+        plt.plot(xarr)
+        plt.plot(varr)
+        plt.show()
+
     } catch {
         print(error)
     }
