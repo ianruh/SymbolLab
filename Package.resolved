@@ -5,8 +5,8 @@
         "package": "LASwift",
         "repositoryURL": "https://github.com/ianruh/LASwift.git",
         "state": {
-          "branch": "linsolve",
-          "revision": "b8800b1077e22a48280d432ceb6ada025efeee30",
+          "branch": "linux",
+          "revision": "14ac25e650d3e35fbed08727143f829b0d250925",
           "version": null
         }
       },
@@ -20,30 +20,12 @@
         }
       },
       {
-        "package": "Nimble",
-        "repositoryURL": "https://github.com/Quick/Nimble.git",
-        "state": {
-          "branch": null,
-          "revision": "2b1809051b4a65c1d7f5233331daa24572cd7fca",
-          "version": "8.1.1"
-        }
-      },
-      {
         "package": "PythonKit",
         "repositoryURL": "https://github.com/pvieito/PythonKit.git",
         "state": {
           "branch": "master",
           "revision": "a0817e0d68f0a50a631fc5fab0b8d219fd010241",
           "version": null
-        }
-      },
-      {
-        "package": "Quick",
-        "repositoryURL": "https://github.com/Quick/Quick.git",
-        "state": {
-          "branch": null,
-          "revision": "09b3becb37cb2163919a3842a4c5fa6ec7130792",
-          "version": "2.2.1"
         }
       },
       {
@@ -71,15 +53,6 @@
           "branch": null,
           "revision": "6b24333510e9044cf4716a07bed65eeed6bc6393",
           "version": "0.0.8"
-        }
-      },
-      {
-        "package": "SwiftPlot",
-        "repositoryURL": "https://github.com/KarthikRIyer/swiftplot.git",
-        "state": {
-          "branch": null,
-          "revision": "c5424eb8688217029d44e941d3a1d2ccc18c3a82",
-          "version": "2.0.0"
         }
       },
       {
