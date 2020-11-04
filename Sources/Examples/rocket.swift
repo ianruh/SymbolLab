@@ -1,6 +1,6 @@
 import SymbolLab
 import PythonKit
-import SymEngineBackend
+import SwiftBackend
 
 func rocket() {
     let ve: Variable = "ve"
@@ -22,7 +22,7 @@ func rocket() {
         let plt = try Python.import("matplotlib.pyplot")
         let np = try Python.import("numpy")
 
-        let (values, errors, iterations) = try system.solve(at: ["mz": mzVals], using: SymEngineBackend.self)
+        let (values, errors, iterations) = try system.solve(at: ["mz": mzVals], using: SwiftBackend.self)
         let deltaVVals = values.map({$0["deltaV"]!})
 
         let dvarr = np.array(deltaVVals)

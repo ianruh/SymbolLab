@@ -14,11 +14,11 @@ let package = Package(
             name:"examples",
             targets: ["Examples"]),
         .library(
-                name:"symEngineBackend",
-                targets: ["SymEngineBackend"]),
+            name:"symEngineBackend",
+            targets: ["SymEngineBackend"]),
         .library(
-                name:"swiftBackend",
-                targets: ["SwiftBackend"]),
+            name:"swiftBackend",
+            targets: ["SwiftBackend"]),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -34,20 +34,22 @@ let package = Package(
             name: "SymbolLab",
             dependencies: [
                 .product(name: "RealModule", package: "swift-numerics"),
-                "LASwift"
-        ]),
+                "LASwift"]),
         .target(
             name: "Examples",
             dependencies: ["SymbolLab",
                            "PythonKit",
-                           "SymEngineBackend"]),
+                           "SwiftBackend"]),
         .target(
-                name: "SymEngineBackend",
-                dependencies: ["SymbolLab", "SymEngine",]
+            name: "SymEngineBackend",
+            dependencies: ["SymbolLab", "SymEngine",]
         ),
         .target(name: "SwiftBackend", dependencies: ["SymbolLab"]),
         .testTarget(
             name: "SymbolLabTests",
             dependencies: ["SymbolLab"]),
+        .testTarget(
+            name: "SwiftBackendTests",
+            dependencies: ["SymbolLab", "SwiftBackend"]),
     ]
 )

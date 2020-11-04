@@ -400,8 +400,8 @@ public class Add: Node, Operation {
     public let identifier: String = "+"
     
     // Store the parameters for the node
-    private var left: Node
-    private var right: Node
+    public var left: Node
+    public var right: Node
     
     override public var description: String {
         var leftString = "\(self.left)"
@@ -409,12 +409,12 @@ public class Add: Node, Operation {
         
         // Wrap the sides if needed
         if let op = self.left as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
+            if(op.precedence <= self.precedence && op.type == .infix) {
                 leftString = "(\(leftString))"
             }
         }
         if let op = self.right as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
+            if(op.precedence <= self.precedence && op.type == .infix) {
                 rightString = "(\(rightString))"
             }
         }
@@ -556,8 +556,8 @@ public class Subtract: Node, Operation {
     public let identifier: String = "-"
     
     // Store the parameters for the node
-    private var left: Node
-    private var right: Node
+    public var left: Node
+    public var right: Node
     
     override public var description: String {
         var leftString = "\(self.left)"
@@ -584,12 +584,12 @@ public class Subtract: Node, Operation {
         
         // Wrap the sides if needed
         if let op = self.left as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
+            if(op.precedence <= self.precedence && op.type == .infix) {
                 leftString = "(\(leftString))"
             }
         }
         if let op = self.right as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
+            if(op.precedence <= self.precedence && op.type == .infix) {
                 rightString = "(\(rightString))"
             }
         }
@@ -715,8 +715,8 @@ public class Multiply: Node, Operation {
     public let identifier: String = "*"
     
     // Store the parameters for the node
-    private var left: Node
-    private var right: Node
+    public var left: Node
+    public var right: Node
     
     override public var description: String {
         var leftString = "\(self.left)"
@@ -724,12 +724,12 @@ public class Multiply: Node, Operation {
         
         // Wrap the sides if needed
         if let op = self.left as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
+            if(op.precedence <= self.precedence && op.type == .infix) {
                 leftString = "(\(leftString))"
             }
         }
         if let op = self.right as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
+            if(op.precedence <= self.precedence && op.type == .infix) {
                 rightString = "(\(rightString))"
             }
         }
@@ -871,8 +871,8 @@ public class Divide: Node, Operation {
     public let identifier: String = "/"
     
     // Store the parameters for the node
-    private var left: Node
-    private var right: Node
+    public var left: Node
+    public var right: Node
     
     override public var description: String {
         var leftString = "\(self.left)"
@@ -880,12 +880,12 @@ public class Divide: Node, Operation {
         
         // Wrap the sides if needed
         if let op = self.left as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
+            if(op.precedence <= self.precedence && op.type == .infix) {
                 leftString = "(\(leftString))"
             }
         }
         if let op = self.right as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
+            if(op.precedence <= self.precedence && op.type == .infix) {
                 rightString = "(\(rightString))"
             }
         }
@@ -1005,8 +1005,8 @@ public class Power: Node, Operation {
     public let identifier: String = "^"
     
     // Store the parameters for the node
-    private var left: Node
-    private var right: Node
+    public var left: Node
+    public var right: Node
     
     override public var description: String {
         var leftString = "\(self.left)"
