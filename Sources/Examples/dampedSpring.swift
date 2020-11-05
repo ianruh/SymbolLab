@@ -30,8 +30,6 @@ func dampedMassSpring() {
         var xVals = values.map({$0["x"]!})
         var vVals = values.map({$0["v"]!})
 
-        print(xVals)
-
         tVals.popLast() // xVals and vVals has one less element than tVals
 
         let xarr = np.array(xVals)

@@ -136,7 +136,9 @@ public class Number: Node, ExpressibleByIntegerLiteral {
     }
 
     public override func getSymbol<Engine: SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
-        return Engine.new(self.value)
+        let t = Engine.new(self.value)
+        print("TTTTTTT: \(t)")
+        return t
     }
 
     override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {

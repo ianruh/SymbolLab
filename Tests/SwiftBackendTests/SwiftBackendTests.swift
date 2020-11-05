@@ -156,6 +156,66 @@ final class SwiftBackendTests: XCTestCase {
         assertNodesEqual(SwiftBackend.diff(of: expr3, withRespectTo: x), result3, ["(x+1.0)^x*((1*x)/(x+1.0)+1*log(x+1.0))"])
     }
 
+    func testDerivativeSin() {
+        let x = Variable("x")
+
+        let expr = Sin([x])
+        let result =  Cos([x])
+        assertNodesEqual(SwiftBackend.diff(of: expr, withRespectTo: x), result, ["cos(x)*1"])
+
+        let expr2 = Sin([Power([x, Number(2)])])
+        let result2 = Cos([Power([x, Number(2)])])*2*x
+        assertNodesEqual(SwiftBackend.diff(of: expr2, withRespectTo: x), result2, ["cos(x^2)*(((x^2*1)*2)/x)"])
+    }
+
+    func testDerivativeCos() {
+        let x = Variable("x")
+
+        let expr = Cos([x])
+        let result =  -1*Sin([x])
+        assertNodesEqual(SwiftBackend.diff(of: expr, withRespectTo: x), result, ["(-1.0*sin(x))*1"])
+
+        let expr2 = Cos([Power([x, Number(2)])])
+        let result2 = -1*Sin([Power([x, Number(2)])])*2*x
+        assertNodesEqual(SwiftBackend.diff(of: expr2, withRespectTo: x), result2, ["(-1.0*sin(x^2))*(((x^2*1)*2)/x)"])
+    }
+
+    func testDerivativeTan() {
+        let x = Variable("x")
+
+        let expr = Tan([x])
+        let result =  1/Power([Cos([x]), Number(2)])
+        assertNodesEqual(SwiftBackend.diff(of: expr, withRespectTo: x), result, ["(1.0/cos(x)^2)*1"])
+
+        let expr2 = Tan([Power([x, Number(2)])])
+        let result2 = 1/Power([Cos([Power([x, Number(2)])]), Number(2)]) * 2 * x
+        assertNodesEqual(SwiftBackend.diff(of: expr2, withRespectTo: x), result2, ["(1.0/cos(x^2)^2)*(((x^2*1)*2)/x)"])
+    }
+
+    func testDerivativeExp() {
+        let x = Variable("x")
+
+        let expr = Exp([x])
+        let result =  Exp([x])
+        assertNodesEqual(SwiftBackend.diff(of: expr, withRespectTo: x), result, ["exp(x)*1"])
+
+        let expr2 = Exp([Power([x, Number(2)])])
+        let result2 = Exp([Power([x, Number(2)])]) * 2 * x
+        assertNodesEqual(SwiftBackend.diff(of: expr2, withRespectTo: x), result2, ["exp(x^2)*(((x^2*1)*2)/x)"])
+    }
+
+    func testDerivativeLog() {
+        let x = Variable("x")
+
+        let expr = Log([x])
+        let result =  1/x
+        assertNodesEqual(SwiftBackend.diff(of: expr, withRespectTo: x), result, ["(1.0/x)*1"])
+
+        let expr2 = Log([Power([x, Number(2)])])
+        let result2 = 1/Power([x, Number(2)]) * 2 * x
+        assertNodesEqual(SwiftBackend.diff(of: expr2, withRespectTo: x), result2, ["(1.0/x^2)*(((x^2*1)*2)/x)"])
+    }
+
     static var allTests = [
         ("Derivative Assign Test", testDerivativeAssign),
         ("Derivative Variable Test", testDerivativeVariable),
@@ -166,5 +226,10 @@ final class SwiftBackendTests: XCTestCase {
         ("Derivative Multiply Test", testDerivativeMultiply),
         ("Derivative Division Test", testDerivativeDivision),
         ("Derivative Power Test", testDerivativePower),
+        ("Derivative Sin Test", testDerivativeSin),
+        ("Derivative Cos Test", testDerivativeCos),
+        ("Derivative Tan Test", testDerivativeTan),
+        ("Derivative Exp Test", testDerivativeExp),
+        ("Derivative Log Test", testDerivativeLog),
     ]
 }

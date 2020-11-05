@@ -343,7 +343,7 @@ public class Decimal: Number, Operation, ExpressibleByFloatLiteral {
     }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
-        return Engine.new(self.value)
+        Engine.new(self.valueDouble)
     }
 
     override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
