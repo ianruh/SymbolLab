@@ -1,4 +1,4 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -22,7 +22,7 @@ let package = Package(
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
-        .package(name: "SymEngine", url: "https://github.com/ianruh/SymEngine.swift", from: "0.0.2"),
+        .package(url: "https://github.com/ianruh/SymEngine.swift", from: "0.0.2"),
         .package(url: "https://github.com/apple/swift-numerics", from: "0.0.8"),
         .package(url: "https://github.com/ianruh/LASwift.git", .branch("linux")),
         .package(url: "https://github.com/pvieito/PythonKit.git", .branch("master"))
