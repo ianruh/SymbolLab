@@ -108,30 +108,8 @@ public class Assign: Node, Operation {
     override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
         return nil
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // Make copies
-        var optionsCopy = options
-        var depthsCopy = depths
-        // Update depths
-        depthsCopy.assignmentDepth += 1
-        depthsCopy.depth += 1
-        
-        let newLeft = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        let newRight = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        return Assign([newLeft, newRight])
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        let leftSVGOpt = self.left.svg(using: source)
-        let rightSVGOpt = self.right.svg(using: source)
-        let opSVGOpt = source.getSymbol(self.identifier)
-        guard let rightSVG = rightSVGOpt else { return nil }
-        guard let leftSVG = leftSVGOpt else { return nil }
-        guard let opSVG = opSVGOpt else { return nil }
-        return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         throw SymbolLabError.notApplicable(message: "evaluate isn't applicable to assignment")
     }
@@ -229,25 +207,8 @@ public class Negative: Node, Operation {
         }
         return Engine.negate(argumentSymbol)
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // We don't need to make any copies here
-        return Negative([Number(1).generate(withOptions: options, depths: depths)])
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        // MAYBE?
-//        guard self.argument.isBasic || self.argument as? Decimal != nil else {
-//            print("Missused negative operation : '-\(self.argument)'")
-//            return nil
-//        }
-        let argSVGOpt = self.argument.svg(using: source)
-        let opSVGOpt = source.getSymbol(self.identifier)
-        guard let argSVG = argSVGOpt else { return nil }
-        guard let opSVG = opSVGOpt else { return nil }
-        return SVGUtilities.compose(elements: [opSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try -1*self.argument.evaluate(withValues: values)
     }
@@ -345,23 +306,8 @@ public class Decimal: Number, Operation, ExpressibleByFloatLiteral {
     override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
         Engine.new(self.valueDouble)
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        let newLeft = Number(1).generate(withOptions: options, depths: depths)
-        let newRight = Number(1).generate(withOptions: options, depths: depths)
-        return Decimal([newLeft, newRight])
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        let leftSVGOpt = Number(self.valueDouble.whole).svg(using: source)
-        let rightSVGOpt = Number(self.valueDouble.frac).svg(using: source)
-        let opSVGOpt = source.getSymbol(self.identifier)
-        guard let rightSVG = rightSVGOpt else { return nil }
-        guard let leftSVG = leftSVGOpt else { return nil }
-        guard let opSVG = opSVGOpt else { return nil }
-        return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.integerSpacing, alignment: .end, direction: .horizontal)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return self.valueDouble
     }
@@ -465,42 +411,8 @@ public class Add: Node, Operation {
         guard let right = self.right.getSymbol(using: type) else {return nil}
         return Engine.add(left, right)
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // Make copies
-        var optionsCopy = options
-        var depthsCopy = depths
-        // Update depths
-        depthsCopy.depth += 1
-        
-        let newLeft = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        let newRight = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        return Add([newLeft, newRight])
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        let leftSVGOpt = self.left.svg(using: source)
-        let rightSVGOpt = self.right.svg(using: source)
-        let opSVGOpt = source.getSymbol(self.identifier)
-        guard var rightSVG = rightSVGOpt else { return nil }
-        guard var leftSVG = leftSVGOpt else { return nil }
-        guard let opSVG = opSVGOpt else { return nil }
-        
-        // Wrap the sides if needed
-        if let op = self.left as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
-                leftSVG = SVGUtilities.parentheses(leftSVG, using: source)
-            }
-        }
-        if let op = self.right as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
-                rightSVG = SVGUtilities.parentheses(rightSVG, using: source)
-            }
-        }
-        
-        return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.left.evaluate(withValues: values) + self.right.evaluate(withValues: values)
     }
@@ -621,45 +533,8 @@ public class Subtract: Node, Operation {
         guard let right = self.right.getSymbol(using: type) else {return nil}
         return Engine.subtract(left, right)
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // Make copies
-        var optionsCopy = options
-        var depthsCopy = depths
-        // Update depths
-        depthsCopy.depth += 1
-        // ToDo: This isn't exactly what I want, because it disallows
-        // 1-(-2), while I just want to disallow 1--2
-        optionsCopy.remove(operation: Negative())
-        
-        let newLeft = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        let newRight = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        return Subtract([newLeft, newRight])
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        let leftSVGOpt = self.left.svg(using: source)
-        let rightSVGOpt = self.right.svg(using: source)
-        let opSVGOpt = source.getSymbol(self.identifier)
-        guard var rightSVG = rightSVGOpt else { return nil }
-        guard var leftSVG = leftSVGOpt else { return nil }
-        guard let opSVG = opSVGOpt else { return nil }
-        
-        // Wrap the sides if needed
-        if let op = self.left as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
-                leftSVG = SVGUtilities.parentheses(leftSVG, using: source)
-            }
-        }
-        if let op = self.right as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
-                rightSVG = SVGUtilities.parentheses(rightSVG, using: source)
-            }
-        }
-        
-        return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.left.evaluate(withValues: values) - self.right.evaluate(withValues: values)
     }
@@ -780,42 +655,8 @@ public class Multiply: Node, Operation {
         guard let right = self.right.getSymbol(using: type) else {return nil}
         return Engine.multiply(left, right)
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // Make copies
-        var optionsCopy = options
-        var depthsCopy = depths
-        // Update depths
-        depthsCopy.depth += 1
-        
-        let newLeft = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        let newRight = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        return Multiply([newLeft, newRight])
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        let leftSVGOpt = self.left.svg(using: source)
-        let rightSVGOpt = self.right.svg(using: source)
-        let opSVGOpt = source.getSymbol(self.identifier)
-        guard var rightSVG = rightSVGOpt else { return nil }
-        guard var leftSVG = leftSVGOpt else { return nil }
-        guard let opSVG = opSVGOpt else { return nil }
-        
-        // Wrap the sides if needed
-        if let op = self.left as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
-                leftSVG = SVGUtilities.parentheses(leftSVG, using: source)
-            }
-        }
-        if let op = self.right as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
-                rightSVG = SVGUtilities.parentheses(rightSVG, using: source)
-            }
-        }
-        
-        return SVGUtilities.compose(elements: [leftSVG, opSVG, rightSVG], spacing: SVGOptions.infixSpacing, alignment: .center, direction: .horizontal)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.left.evaluate(withValues: values) * self.right.evaluate(withValues: values)
     }
@@ -921,35 +762,8 @@ public class Divide: Node, Operation {
         guard let right = self.right.getSymbol(using: type) else {return nil}
         return Engine.divide(left, right)
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // Make copies
-        var optionsCopy = options
-        var depthsCopy = depths
-        // Update depths
-        depthsCopy.fractionDepth += 1
-        depthsCopy.depth += 1
-        
-        let newLeft = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        let newRight = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        return Divide([newLeft, newRight])
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        let leftSVGOpt = self.left.svg(using: source)
-        let rightSVGOpt = self.right.svg(using: source)
-        let barSVGOpt = source.getSymbol("-")
-        guard let rightSVG = rightSVGOpt else { return nil }
-        guard let leftSVG = leftSVGOpt else { return nil }
-        guard var barSVG = barSVGOpt else { return nil }
-        
-        guard let rightBB = rightSVG.boundingBox else { return nil }
-        guard let leftBB = leftSVG.boundingBox else { return nil }
-        barSVG.resize(width: max(rightBB.width, leftBB.width), height: SVGOptions.fractionBarThickness)
-        
-        return SVGUtilities.compose(elements: [leftSVG, barSVG, rightSVG], spacing: SVGOptions.fractionSpacing, alignment: .center, direction: .vertical)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.left.evaluate(withValues: values) / self.right.evaluate(withValues: values)
     }
@@ -1061,42 +875,8 @@ public class Power: Node, Operation {
         guard let right = self.right.getSymbol(using: type) else {return nil}
         return Engine.exponentiate(left, right)
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // Make copies
-        var optionsCopy = options
-        var depthsCopy = depths
-        // Update depths
-        depthsCopy.exponentDepth += 1
-        depthsCopy.depth += 1
-        
-        let newLeft = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        let newRight = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        return Power([newLeft, newRight])
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        let leftSVGOpt = self.left.svg(using: source)
-        let rightSVGOpt = self.right.svg(using: source)
-        guard var leftSVG = leftSVGOpt else { return nil }
-        guard var rightSVG = rightSVGOpt else { return nil }
-        
-        if let op = self.left as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
-                leftSVG = SVGUtilities.parentheses(leftSVG, using: source)
-            }
-        }
-        
-        rightSVG.scale(by: 0.5)
-        guard let leftBB = leftSVG.boundingBox else { return nil }
-        
-        let svg: SVG = SVG(children: [])
-        svg.paste(path: leftSVG, withTopLeftAt: Point(0,0))
-        svg.paste(path: rightSVG, withCenterLeftAt: Point(leftBB.width + SVGOptions.powerSpacing, 0))
-        svg.minimizeSVG()
-        return svg
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try pow(self.left.evaluate(withValues: values), self.right.evaluate(withValues: values))
     }
@@ -1197,33 +977,8 @@ public class Factorial: Node, Operation {
         // TODO: Factorial in symbolic math protocol
         return nil
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // Make copies
-        var optionsCopy = options
-        var depthsCopy = depths
-        // Update depths
-        depthsCopy.depth += 1
-        
-        let newParam = GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy)
-        return Factorial([newParam])
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        let argSVGOpt = argument.svg(using: source)
-        guard var argSVG = argSVGOpt else { return nil }
-        guard let opSVG = source.getSymbol("!") else { return nil }
-        
-        // Wrap if needed
-        if let op = self.argument as? Operation {
-            if(op.type != .function) {
-                argSVG = SVGUtilities.parentheses(argSVG, using: source)
-            }
-        }
-        
-        return SVGUtilities.compose(elements: [argSVG, opSVG], spacing: SVGOptions.parethesesSpacing, alignment: .end, direction: .horizontal)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         // TODO: Factorial evaluation
         throw SymbolLabError.notApplicable(message: "Factorial not implemented for the moment")

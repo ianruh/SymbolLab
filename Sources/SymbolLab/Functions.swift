@@ -33,26 +33,6 @@ extension Function {
     public var associativity: OperationAssociativity {
         .none
     }
-    
-    /**
-     Default implementation of generater for functions. Can be overridden by speicifc functions.
-     */
-    public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // Make copies
-        var optionsCopy = options
-        var depthsCopy = depths
-        // Update depths
-        depthsCopy.functionDepth += 1
-        depthsCopy.depth += 1
-        
-        // Create needed nodes
-        var params: [Node] = []
-        for _ in 0..<self.numArguments {
-            params.append(GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy))
-        }
-        
-        return self.factory(params)
-    }
 }
 
 //######################### Define the functions #########################
@@ -95,29 +75,8 @@ public class Parentheses: Node, Function {
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
         return self.param.getSymbol(using: type)
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // Make copies
-        var optionsCopy = options
-        var depthsCopy = depths
-        // We don't consider parentheses a real function
-        // depthsCopy.functionDepth += 1
-        depthsCopy.depth += 1
-        
-        // Create needed nodes
-        var params: [Node] = []
-        for _ in 0..<self.numArguments {
-            params.append(GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy))
-        }
-        
-        return self.factory(params)
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        guard let argSVG = self.param.svg(using: source) else { return nil }
-        return SVGUtilities.parentheses(argSVG, using: source)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.param.evaluate(withValues: values)
     }
@@ -159,8 +118,8 @@ public class Derivative: Node, Function {
     public let numArguments: Int = 2
     
     // Store the parameters for the node
-    internal var diffOf: Node
-    internal var withRespectTo: Node
+    public var diffOf: Node
+    public var withRespectTo: Node
     
     override public var description: String {
         return "d(\(self.diffOf),\(self.withRespectTo))"
@@ -205,28 +164,6 @@ public class Derivative: Node, Function {
         return Engine.diff(of: of, withRespectTo: v)
     }
 
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // Make copies
-        var optionsCopy = options
-        var depthsCopy = depths
-        // We don't consider parentheses a real function
-        // depthsCopy.functionDepth += 1
-        depthsCopy.depth += 1
-        
-        // Create needed nodes
-        var params: [Node] = []
-        for _ in 0..<self.numArguments {
-            params.append(GeneratorUtilities.randomNode(&optionsCopy, withDepths: depthsCopy))
-        }
-        
-        return self.factory(params)
-    }
-    
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        // TODO: SVG of derivative
-        return nil
-    }
-
     /// Attempt to evaluate symbolically, fall back on numerically, then fail. Prints an err message in debug mode if symolic evalutaion fails.
     ///
     /// The numerical evaluation does middle center difference, with h=sqrt(epsilon)*x.
@@ -236,6 +173,7 @@ public class Derivative: Node, Function {
     /// - Parameter values: The values to evaluate at.
     /// - Returns: The value the node evaluates to at the given points.
     /// - Throws: If evaluation fails for some reason.
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         // Try symbolically
         // TODO: Symbolic derivative in evaluate
@@ -363,12 +301,8 @@ public class Integral: Node, Function {
         // TODO: Symbolic integration
         return nil
     }
-
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        // TODO: SVG of integral
-        return nil
-    }
     
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         // TODO: Numerical integration
         throw SymbolLabError.notApplicable(message: "Can't evaluate integrals")
@@ -465,14 +399,8 @@ public class Expand: Node, Function {
         guard let param = self.argument.getSymbol(using: type) else {return nil}
         return Engine.expand(param)
     }
-
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
     
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return try self.argument.evaluate(withValues: values)
     }
@@ -544,14 +472,8 @@ public class AbsoluteValue: Node, Function {
         guard let param = self.argument.getSymbol(using: type) else {return nil}
         return Engine.abs(param)
     }
-
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        guard let pipeSVG = source.getSymbol("|") else { return nil }
-        guard let argSVG = self.argument.svg(using: source) else { return nil }
-        let pipe2SVG = pipeSVG
-        return SVGUtilities.compose(elements: [pipeSVG, argSVG, pipe2SVG], spacing: SVGOptions.parethesesSpacing, alignment: .center, direction: .horizontal)
-    }
     
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         let val = try self.argument.evaluate(withValues: values)
         return val > 0 ? val: -1*val
@@ -625,13 +547,7 @@ public class ErrorFunction: Node, Function {
         return Engine.erf(param)
     }
 
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
+    @inlinable
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         throw SymbolLabError.notApplicable(message: "erf not implemneted yet")
     }
@@ -708,13 +624,7 @@ public class Sin: Node, Function {
         return Engine.sin(param)
     }
 
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
+    @inlinable
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .sin(self.argument.evaluate(withValues: values))
     }
@@ -791,13 +701,7 @@ public class Cos: Node, Function {
         return Engine.cos(param)
     }
 
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
+    @inlinable
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .cos(self.argument.evaluate(withValues: values))
     }
@@ -874,13 +778,7 @@ public class Tan: Node, Function {
         return Engine.tan(param)
     }
 
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
+    @inlinable
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .tan(self.argument.evaluate(withValues: values))
     }
@@ -957,14 +855,7 @@ public class Sqrt: Node, Function {
         return Engine.sqrt(param)
     }
 
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        // TODO: Actual sqrt symbol for svg
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
+    @inlinable
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .sqrt(self.argument.evaluate(withValues: values))
     }
@@ -1041,14 +932,7 @@ public class Exp: Node, Function {
         return Engine.exp(param)
     }
 
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        // TODO: Actual exp svg
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
+    @inlinable
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try  .exp(self.argument.evaluate(withValues: values))
     }
@@ -1127,13 +1011,7 @@ public class Log: Node, Function {
         return Engine.log(param)
     }
 
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        guard let nameSVG = SVGUtilities.svg(of: self.identifier, using: source) else { return nil }
-        guard var argSVG = self.argument.svg(using: source) else { return nil }
-        argSVG = SVGUtilities.parentheses(argSVG, using: source)
-        return SVGUtilities.compose(elements: [nameSVG, argSVG], spacing: SVGOptions.integerSpacing, alignment: .center, direction: .horizontal)
-    }
-
+    @inlinable
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
         return try .log(self.argument.evaluate(withValues: values))
     }

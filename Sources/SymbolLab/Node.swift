@@ -67,16 +67,6 @@ public class Node: CustomStringConvertible {
         preconditionFailure("This method must be overridden")
     }
 
-    /// Generate random node with option. This should be overridden.
-    public func generate(withOptions options: GeneratorOptions, depths: Depths) -> Node {
-        preconditionFailure("This method must be overridden")
-    }
-
-    /// Get an svg of the node. This should be overridden.
-    public func svg(using source: SVGSource) -> SVGElement? {
-        preconditionFailure("This method must be overridden")
-    }
-
     /// Evaluate the node. This should be overridden.
     public func evaluate(withValues values: [String: Double]) throws -> Double {
         preconditionFailure("This method must be overridden")
@@ -140,16 +130,8 @@ public class Number: Node, ExpressibleByIntegerLiteral {
         print("TTTTTTT: \(t)")
         return t
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // No need to use the depths as this is a base node
-        return Number(Int.random(withMaxDigits: options.numbers.maxWholeDigits))
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        return SVGUtilities.svg(of: self.description, using: source)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         return Double(self.value)
     }
@@ -217,16 +199,8 @@ public class Variable: Node, ExpressibleByStringLiteral {
     override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
         return Engine.new(self.string)
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // No need to use the depths as this is a base node
-        Variable(options.variables.names.randomElement()!)
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        return SVGUtilities.svg(of: self.string, using: source)
-    }
-    
+    @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         guard values.keys.contains(self.string) else {
             throw SymbolLabError.noValue(forVariable: self.string)
