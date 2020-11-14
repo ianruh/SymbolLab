@@ -25,7 +25,7 @@ public class OperationPrecedence: Comparable {
         self.higherThan = higherThan
     }
     
-    func getLevel() -> Int {
+    public func getLevel() -> Int {
         var count: Int = 0
         var current: OperationPrecedence = self
         while(current.higherThan != nil) {

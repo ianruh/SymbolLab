@@ -6,6 +6,11 @@
 //
 
 import Foundation
+import SymbolLab
+
+
+public typealias Operation = SymbolLab.Operation
+
 
 //#################### PARSERS ######################
 
@@ -258,7 +263,7 @@ public struct Parser {
                             }
                             
                             // Special case to disallow chaining of decimals
-                            if(op.identifier == "." && ((left as? Decimal) != nil || (right as? Decimal) != nil)) {
+                            if(op.identifier == "." && ((left as? SymbolLab.Decimal) != nil || (right as? SymbolLab.Decimal) != nil)) {
                                 self.debug("Decimals cannot be chained.")
                                 return []
                             }

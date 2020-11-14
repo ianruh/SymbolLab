@@ -11,6 +11,9 @@ var products: [Product] = [
     .executable(
         name:"examples",
         targets: ["Examples"]),
+    .library(
+        name:"swiftBackend",
+        targets: ["SwiftBackend"])
 ]
 
 var dependencies: [PackageDescription.Package.Dependency] = [
@@ -28,32 +31,23 @@ var targets: [Target] = [
     .testTarget(
         name: "SymbolLabTests",
         dependencies: ["SymbolLab", "SwiftBackend"]),
-]
-
-var examplesTarget: Target = .target(
+    .target(name: "SwiftBackend",
+        dependencies: ["SymbolLab"]),
+    .testTarget(name: "SwiftBackendTests",
+        dependencies: ["SymbolLab", "SwiftBackend"]),
+    .target(
         name: "Examples",
         dependencies: ["SymbolLab",
-                        "PythonKit"])
+                        "PythonKit",
+                        "SwiftBackend"])
+]
 
 #if SYMENGINE
-    print("Symengine")
     products.append(.library(name:"symEngineBackend",targets: ["SymEngineBackend"]))
 
     dependencies.append(.package(url: "https://github.com/ianruh/SymEngine.swift", from: "0.0.2"))
 
     targets.append(.target(name: "SymEngineBackend", dependencies: ["SymbolLab", "SymEngine"]))
-
-    examplesTarget.dependencies.append("SymEngineBackend")
-    targets.append(examplesTarget)
-#else
-    print("SwiftBackend")
-    products.append(.library(name:"swiftBackend",targets: ["SwiftBackend"]))
-
-    targets.append(.target(name: "SwiftBackend", dependencies: ["SymbolLab"]))
-    targets.append(.testTarget(name: "SwiftBackendTests",dependencies: ["SymbolLab", "SwiftBackend"]))
-
-    examplesTarget.dependencies.append("SwiftBackend")
-    targets.append(examplesTarget)
 #endif
 
 let package = Package(
