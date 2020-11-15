@@ -9,7 +9,7 @@ precedencegroup ExponentiationPrecedence {
     higherThan: MultiplicationPrecedence
 }
 
-infix operator ** : ExponentiationPrecedence
+// infix operator ** : ExponentiationPrecedence
 
 public struct SwiftBackend: SymbolLab.SymbolicMathEngine {
     public typealias Symbol = Node
