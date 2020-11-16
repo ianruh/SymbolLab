@@ -111,6 +111,19 @@ Not if you value your job.
 
   This would make modeling of more complex physical systems much easier.
 
-- Get LASwift to support generic BLAS implentations rather than just Accelerate.
-
 - Add units to variables and numbers to check the dimensionality of equations.
+
+## Plan of Attack
+
+*In order*
+
+- [ ] Symoblic math operations (simplification, cannonical forms, fix the derivative of variables) based on [this](http://www.math.wpi.edu/IQP/BVCalcHist/calc5.html#_Toc407004380).
+- [ ] Check the handling of implicit derivatives
+- [ ] Derivatives as solvable values
+- [ ] Assume Young's Theorem for the symmetry of partials
+- [ ] Implicit integration framework (euler, RK maybe)
+- [ ] Derivatives of the solution to ODE at furture time T.
+- [ ] Optimization over systems of non-linear ODEs.
+
+*Would be nice*
+- [ ] Constraint graph. Particularly if we have a large system with a couple ODEs, it would be better to not do the implict integration steps with the entire systems, but instead just the necessary parts.
