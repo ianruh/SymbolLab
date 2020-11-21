@@ -98,6 +98,13 @@ public class Node: CustomStringConvertible {
     public func getNode(withId id: Id) -> Node? {
         preconditionFailure("This method must be overridden")
     }
+
+    /// Simplify the node
+    ///
+    /// - Returns: The simplified node, or the same node if no simplification has been performed.
+    public func simplify() -> Node {
+        preconditionFailure("This method must be overridden")
+    }
 }
 
 public class Number: Node, ExpressibleByIntegerLiteral {
@@ -127,7 +134,6 @@ public class Number: Node, ExpressibleByIntegerLiteral {
 
     public override func getSymbol<Engine: SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
         let t = Engine.new(self.value)
-        print("TTTTTTT: \(t)")
         return t
     }
     
@@ -157,6 +163,10 @@ public class Number: Node, ExpressibleByIntegerLiteral {
             return self
         }
         return nil
+    }
+
+    public override func simplify() -> Node {
+        return self
     }
 }
 
@@ -229,5 +239,9 @@ public class Variable: Node, ExpressibleByStringLiteral {
             return self
         }
         return nil
+    }
+
+    public override func simplify() -> Node {
+        return self
     }
 }

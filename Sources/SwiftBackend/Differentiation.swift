@@ -32,7 +32,7 @@ import SymbolLab
 ///   - variable:
 /// - Returns: The derivative, or nil for 0
 /// - Throws:
-internal func differentiate(_ term: Node, wrt variableNode: Node) throws -> Node? {
+internal func differentiate(_ term: Node, wrt variableNode: Node) -> Node? {
     guard let variable = variableNode as? Variable else {
         // TODO: Figure out how to do this with matching
         preconditionFailure("Only can take derivative with respect to variables at the moment")
@@ -43,54 +43,45 @@ internal func differentiate(_ term: Node, wrt variableNode: Node) throws -> Node
         if(vari == variable) {
             return Number(1)
         } else {
-            return nil
+            return Number(0)
         }
     case let num as Number:
-        return nil
+        return Number(0)
     case let assign as Assign:
-        throw SwiftBackendError.cannotDifferentiate("Cannot differentiate assignment")
-    case let decimal as Decimal:
         return nil
+    case let decimal as Decimal:
+        return Number(0)
     case let negative as Negative:
-        return try differentiate(negative, wrt: variable)
+        return differentiate(negative, wrt: variable)
     case let add as Add:
-        let left = try differentiate(add.left, wrt: variable)
-        let right = try differentiate(add.right, wrt: variable)
+        var terms = []
 
-        if (left != nil && right != nil) {
-            return left! + right!
-        } else if (left == nil && right != nil) {
-            return right!
-        } else if (left != nil && right == nil) {
-            return left!
-        } else {
-            return nil
+        for arg in add.arguments {
+            if let der = differentiate(arg, wrt: variable) {
+                terms.append(der)
+            } else {
+                return nil
+            }
         }
+
+        return terms
+
     case let sub as Subtract:
-        let left = try differentiate(sub.left, wrt: variable)
-        let right = try differentiate(sub.right, wrt: variable)
+        let leftOp = differentiate(sub.left, wrt: variable)
+        let rightOp = differentiate(sub.right, wrt: variable)
 
-        if (left != nil && right != nil) {
-            return left! - right!
-        } else if (left == nil && right != nil) {
-            return -1*right!
-        } else if (left != nil && right == nil) {
-            return left!
-        } else {
+        guard let left = leftOp else {
             return nil
         }
-    case let mul as Multiply:
-        let left = try differentiate(mul.left, wrt: variable)
-        let right = try differentiate(mul.right, wrt: variable)
-
-        if (left != nil && right != nil) {
-            return mul.right*left! + mul.left*right!
-        } else if (left == nil && right != nil) {
-            return mul.left*right!
-        } else if (left != nil && right == nil) {
-            return mul.right*left!
-        } else {
+        guard let right = rightOp else {
             return nil
+        }
+
+        return left - right
+    case let mul as Multiply:
+        var current: Node = mul.arguments[0]
+        for i in 1..<mul.arguments.count {
+            
         }
     case let div as Divide:
         let left = try differentiate(div.left, wrt: variable)
@@ -181,4 +172,18 @@ internal func differentiate(_ term: Node, wrt variableNode: Node) throws -> Node
     default:
         throw SwiftBackendError.cannotDifferentiate("Cant differentiate \(term)")
     }
+}
+
+private func binaryMultiplyDerivative(lhs: Node, rhs: Node, wrt: Node) -> Node? {
+    let leftOp = differentiate(lhs, wrt: variable)
+    let rightOp = differentiate(rhs, wrt: variable)
+
+    guard let left = leftOp else {
+        return nil
+    }
+    guard let right = rightOp else {
+        return nil
+    }
+
+    return rhs*left + lhs*right
 }

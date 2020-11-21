@@ -56,8 +56,8 @@ public struct SwiftBackend: SymbolLab.SymbolicMathEngine {
         return SymbolLab.ErrorFunction([param])
     }
 
-    public static func add(_ lhs: Symbol, _ rhs: Symbol) -> Symbol {
-        return lhs + rhs
+    public static func add(_ params: [Symbol]) -> Symbol {
+        return Add(params)
     }
 
     public static func subtract(_ lhs: Symbol, _ rhs: Symbol) -> Symbol {
@@ -68,8 +68,8 @@ public struct SwiftBackend: SymbolLab.SymbolicMathEngine {
         return lhs / rhs
     }
 
-    public static func multiply(_ lhs: Symbol, _ rhs: Symbol) -> Symbol {
-        return lhs * rhs
+    public static func multiply(_ params: [Symbol]) -> Symbol {
+        return Multiply(params)
     }
 
     public static func negate(_ item: Symbol) -> Symbol {
@@ -81,17 +81,10 @@ public struct SwiftBackend: SymbolLab.SymbolicMathEngine {
     }
 
     public static func diff(of item: Symbol, withRespectTo: Symbol) -> Symbol? {
-        do {
-            if let derivative = try differentiate(item, wrt: withRespectTo) {
-                return derivative
-            } else {
-                // If it is nil, then the derivative is 0, nut undefined. Undefined derivatives
-                // throw an error.
-                return Number(0)
-            }
-        } catch {
-            return nil
+        if let derivative = try differentiate(item, wrt: withRespectTo) {
+            return derivative
         }
+        return nil
     }
 
     public static func sin(_ term: Symbol) -> Symbol? {
