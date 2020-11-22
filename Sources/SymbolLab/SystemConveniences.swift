@@ -127,7 +127,7 @@ public extension System {
         for point in points {
             // Add a temporary constraint for the current point
             // TODO: Don't construct the node by parsing. Fix this when you have math operators on nodes done
-            self.equations.append(Variable(variable) ~ Decimal(floatLiteral: point))
+            self.equations.append(Variable(variable) ~ Number(point))
             let (val, err, n) = try self.solve(guess: guesses, threshold: threshold, maxIterations: maxIterations, using: backend)
             values.append(val)
             errors.append(err)

@@ -37,12 +37,6 @@ public func +(_ lhs: Node, _ rhs: Number) -> Node {
 public func +(_ lhs: Number, _ rhs: Node) -> Node {
     return Add([lhs, rhs])
 }
-public func +(_ lhs: Node, _ rhs: Decimal) -> Node {
-    return Add([lhs, rhs])
-}
-public func +(_ lhs: Decimal, _ rhs: Node) -> Node {
-    return Add([lhs, rhs])
-}
 
 /// Subtract operator for nodes
 ///
@@ -57,12 +51,6 @@ public func -(_ lhs: Node, _ rhs: Number) -> Node {
     return Subtract([lhs, rhs])
 }
 public func -(_ lhs: Number, _ rhs: Node) -> Node {
-    return Subtract([lhs, rhs])
-}
-public func -(_ lhs: Node, _ rhs: Decimal) -> Node {
-    return Subtract([lhs, rhs])
-}
-public func -(_ lhs: Decimal, _ rhs: Node) -> Node {
     return Subtract([lhs, rhs])
 }
 
@@ -81,12 +69,6 @@ public func /(_ lhs: Node, _ rhs: Number) -> Node {
 public func /(_ lhs: Number, _ rhs: Node) -> Node {
     return Divide([lhs, rhs])
 }
-public func /(_ lhs: Node, _ rhs: Decimal) -> Node {
-    return Divide([lhs, rhs])
-}
-public func /(_ lhs: Decimal, _ rhs: Node) -> Node {
-    return Divide([lhs, rhs])
-}
 
 /// Multiply operator for nodes
 ///
@@ -97,17 +79,11 @@ public func /(_ lhs: Decimal, _ rhs: Node) -> Node {
 public func *(_ lhs: Node, _ rhs: Node) -> Node {
     return Multiply([lhs, rhs])
 }
-public func *(_ lhs: Node, _ rhs: Number) -> Node {
-    return Multiply([lhs, rhs])
+public func *(_ lhs: Node, _ rhs: Double) -> Node {
+    return Multiply(lhs, Number(rhs))
 }
-public func *(_ lhs: Number, _ rhs: Node) -> Node {
-    return Multiply([lhs, rhs])
-}
-public func *(_ lhs: Node, _ rhs: Decimal) -> Node {
-    return Multiply([lhs, rhs])
-}
-public func *(_ lhs: Decimal, _ rhs: Node) -> Node {
-    return Multiply([lhs, rhs])
+public func *(_ lhs: Double, _ rhs: Node) -> Node {
+    return Multiply(Number(lhs), rhs)
 }
 
 /// Take the lhs to the power of the rhs
@@ -123,12 +99,6 @@ public func **(_ lhs: Node, _ rhs: Number) -> Node {
     return Power([lhs, rhs])
 }
 public func **(_ lhs: Number, _ rhs: Node) -> Node {
-    return Power([lhs, rhs])
-}
-public func **(_ lhs: Node, _ rhs: Decimal) -> Node {
-    return Power([lhs, rhs])
-}
-public func **(_ lhs: Decimal, _ rhs: Node) -> Node {
     return Power([lhs, rhs])
 }
 
@@ -147,12 +117,6 @@ public func ~(_ lhs: Number, _ rhs: Node) -> Node {
 public func ~(_ lhs: Node, _ rhs: Number) -> Node {
     return Assign([lhs, rhs])
 }
-public func ~(_ lhs: Node, _ rhs: Decimal) -> Node {
-    return Assign([lhs, rhs])
-}
-public func ~(_ lhs: Decimal, _ rhs: Node) -> Node {
-    return Assign([lhs, rhs])
-}
 
 public func ≈(_ lhs: Node, _ rhs: Node) -> Node {
     return Assign([lhs, rhs])
@@ -161,11 +125,5 @@ public func ≈(_ lhs: Number, _ rhs: Node) -> Node {
     return Assign([lhs, rhs])
 }
 public func ≈(_ lhs: Node, _ rhs: Number) -> Node {
-    return Assign([lhs, rhs])
-}
-public func ≈(_ lhs: Node, _ rhs: Decimal) -> Node {
-    return Assign([lhs, rhs])
-}
-public func ≈(_ lhs: Decimal, _ rhs: Node) -> Node {
     return Assign([lhs, rhs])
 }

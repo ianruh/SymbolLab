@@ -2,29 +2,6 @@ import XCTest
 import SymbolLab
 @testable import SwiftBackend
 
-//[Assign(),
-// Decimal(),
-// Negative(),
-// Add(),
-// Subtract(),
-// Multiply(),
-// Divide(),
-// Power(),
-// Factorial(),
-// Parentheses(),
-// Derivative(),
-// Integral(),
-// Expand(),
-// AbsoluteValue(),
-// ErrorFunction(),
-
-// Sin(),
-// Cos(),
-// Tan(),
-// Sqrt(),
-// Exp(),
-// Log()]
-
 final class SwiftBackendTests: XCTestCase {
 
     func assertNodesEqual(_ node1: Node?, _ node2: Node, _ alternatives: [String] = [], file: StaticString = #file, line: UInt = #line) {
@@ -65,7 +42,7 @@ final class SwiftBackendTests: XCTestCase {
     }
 
     func testDerivativeDecimal() {
-        let one = SymbolLab.Decimal(1.0)
+        let one = SymbolLab.Number(1.0)
         let x = Variable("x")
         let result = Number(0)
         assertNodesEqual(SwiftBackend.diff(of: one, withRespectTo: x), result)

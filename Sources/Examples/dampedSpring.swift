@@ -3,9 +3,9 @@ import PythonKit
 import SwiftBackend
 
 func dampedMassSpring() {
-    let m: Decimal = 1.0          // Mass
-    let k: Decimal = 4.0          // Spring constant
-    let b: Decimal = 0.4          // Damping parameter
+    let m: Number = 1.0          // Mass
+    let k: Number = 4.0          // Spring constant
+    let b: Number = 0.4          // Damping parameter
     let ff = Variable("ff")                 // Damping force
     let fs = Variable("fs")                 // Spring force
     let x = Variable("x", initialValue: 2)  // Mass position

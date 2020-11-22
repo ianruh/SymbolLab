@@ -207,7 +207,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             // Construct the current constraints system
             var constraints: [Node] = []
             for ode in newODEs {
-                constraints.append(ode.dep ~ Decimal(floatLiteral: currentDeps[ode.dep.string]!))
+                constraints.append(ode.dep ~ Number(currentDeps[ode.dep.string]!))
             }
 
             // Solve the system

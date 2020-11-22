@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Numerics
 
 //############################ Protocol and Precendence Definitions ##################
 
@@ -87,6 +88,10 @@ public class Assign: Node, Operation {
     override public var variables: Set<String> {
         return self.left.variables + self.right.variables
     }
+
+    override public var typeIdentifier: String {
+        return "assign"
+    }
     
     required public init(_ params: [Node]) {
         self.left = params[0]
@@ -112,6 +117,14 @@ public class Assign: Node, Operation {
         throw SymbolLabError.notApplicable(message: "evaluate isn't applicable to assignment")
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let eq = otherNode as? Assign {
+            return self.left.equals(eq.left) && self.right.equals(eq.right)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Assign.self) {
@@ -120,37 +133,6 @@ public class Assign: Node, Operation {
         ids.append(contentsOf: self.left.contains(nodeType: nodeType))
         ids.append(contentsOf: self.right.contains(nodeType: nodeType))
         return ids
-    }
-
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.right.id == id) {
-            self.right = replacement
-            return true
-        } else if(self.left.id == id) {
-            self.left = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.left.replace(id: id, with: replacement) || self.right.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-
-        // Try left, then fall bacl to right
-        if let node = self.left.getNode(withId: id) {
-            return node
-        } else {
-            return self.right.getNode(withId: id)
-        }
     }
 
     public override func simplify() -> Node {
@@ -169,25 +151,19 @@ public class Negative: Node, Operation {
     public var argument: Node
     
     override public var description: String {
-        // MAYBE?
-//        guard self.argument.isBasic || self.argument as? Decimal != nil else {
-//            print("Missused negative operation : '-\(self.argument)'")
-//            return ""
-//        }
         return "-\(self.argument)"
     }
     
     override public var latex: String {
-        // MAYBE?
-//        guard self.argument.isBasic || self.argument as? Decimal != nil else {
-//            print("Missused negative operation : '-\(self.argument)'")
-//            return ""
-//        }
         return "-\(self.argument.latex)"
     }
     
     override public var variables: Set<String> {
         return self.argument.variables
+    }
+
+    override public var typeIdentifier: String {
+        return "negative"
     }
     
     required public init(_ params: [Node]) {
@@ -215,6 +191,14 @@ public class Negative: Node, Operation {
         return try -1*self.argument.evaluate(withValues: values)
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let neg = otherNode as? Negative {
+            return self.argument.equals(neg.argument)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Negative.self) {
@@ -224,126 +208,8 @@ public class Negative: Node, Operation {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-
-        // Try left, then fall bacl to right
-        return self.argument.getNode(withId: id)
-    }
-
     public override func simplify() -> Node {
         return Multiply(Number(-1), self.argument.simplify())
-    }
-}
-
-/// A decimal number. Negatives are unknown here.
-public class Decimal: Number, Operation, ExpressibleByFloatLiteral {
-    public typealias FloatLiteralType = Double
-
-    public let precedence: OperationPrecedence = OperationPrecedence(higherThan: Negative().precedence)
-    public let type: OperationType = .infix
-    public let associativity: OperationAssociativity = .none
-    public let identifier: String = "."
-    
-    // Store the parameters for the node
-    public var valueDouble: Double
-    
-    override public var description: String {
-        return "\(self.valueDouble)"
-    }
-    
-    override public var latex: String {
-        return "\(self.valueDouble)"
-    }
-    
-    override public var variables: Set<String> {
-        return []
-    }
-    
-    required public init(_ params: [Node]) {
-        guard let leftNumber = params[0] as? Number else {
-            preconditionFailure("Misused decimal. \(params[0]) is not a Number")
-        }
-        guard let rightNumber = params[1] as? Number else {
-            preconditionFailure("Misused decimal. \(params[1]) is not a Number")
-        }
-        guard let value = Double("\(leftNumber).\(rightNumber)") else {
-            preconditionFailure("Well not idea how this happens. But here you go: \(leftNumber).\(rightNumber) apparently can't be a Double")
-        }
-        self.valueDouble = value
-        super.init(0)
-    }
-
-    public required init(floatLiteral value: Double) {
-        self.valueDouble = value
-        super.init(0)
-    }
-
-    required public convenience init(integerLiteral value: Int) {
-        self.init(floatLiteral: Double(value))
-    }
-
-    public required init() {
-        self.valueDouble = 0
-        super.init(0)
-    }
-
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-
-    override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
-        Engine.new(self.valueDouble)
-    }
-    
-    @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
-        return self.valueDouble
-    }
-
-    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
-        var ids: [Id] = []
-        if(nodeType == Decimal.self) {
-            ids.append(self.id)
-        }
-        return ids
-    }
-
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // No children to replace.
-        return false
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return nil
-    }
-
-    public override func simplify() -> Node {
-        return self
     }
 }
 
@@ -361,39 +227,34 @@ public class Add: Node, Operation {
     override public var description: String {
         var str = ""
 
-        for arg in arguments {
-            if let op = arg as? Operation {
+        for i in 0..<self.arguments.count-1 {
+            if let op = self.arguments[i] as? Operation {
                 if(op.precedence <= self.precedence && op.type == .infix) {
                     str += "(\(op))"
                 } else {
                     str += "\(op)"
                 }
+            } else {
+                str += self.arguments[i].description
             }
             str += "+"
         }
-
-        str.remove(at: str.endIndex)
+        
+        if let op = self.arguments[self.arguments.count-1] as? Operation {
+            if(op.precedence <= self.precedence && op.type == .infix) {
+                str += "(\(op))"
+            } else {
+                str += "\(op)"
+            }
+        } else {
+            str += self.arguments[self.arguments.count-1].description
+        }
         
         return str
     }
     
     override public var latex: String {
-        var str = ""
-
-        for arg in arguments {
-            if let op = arg as? Operation {
-                if(op.precedence <= self.precedence && op.type == .infix) {
-                    str += "(\(op))"
-                } else {
-                    str += "\(op)"
-                }
-            }
-            str += "+"
-        }
-
-        str.remove(at: str.endIndex)
-        
-        return str
+        return self.description
     }
     
     override public var variables: Set<String> {
@@ -405,6 +266,10 @@ public class Add: Node, Operation {
 
         return variables
     }
+
+    override public var typeIdentifier: String {
+        return "addition"
+    }
     
     required public init(_ params: [Node]) {
         self.arguments = params
@@ -413,6 +278,10 @@ public class Add: Node, Operation {
     override required public init() {
         self.arguments = []
         super.init()
+    }
+
+    public convenience init(_ params: Node...) {
+        self.init(params)
     }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using backend: Engine.Type) -> Engine.Symbol? {
@@ -436,6 +305,22 @@ public class Add: Node, Operation {
         return sum
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let add = otherNode as? Add {
+            if(self.arguments.count == add.arguments.count) {
+                var isEqual = true
+                for i in 0..<self.arguments.count {
+                    isEqual = isEqual && (self.arguments[i].equals(add.arguments[i]))
+                }
+                return isEqual
+            } else {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Add.self) {
@@ -449,7 +334,101 @@ public class Add: Node, Operation {
     }
 
     public override func simplify() -> Node {
-        return Add(self.arguments.map({$0.simplify()}))
+
+        func level(_  node: Add) -> Add {
+            // Leveling of any addition operators to one operator
+            var leveled: [Node] = []
+            for term in node.arguments {
+                if let add = term as? Add {
+                    leveled.append(contentsOf: add.arguments)
+                } else {
+                    leveled.append(term)
+                }
+            }
+            return Add(leveled)
+        }
+
+        func combineNumbers(_ node: Add) -> Add {
+            // Combine numbers
+            var numbers: [Number] = []
+            var other: [Node] = []
+            for term in node.arguments {
+                if let num = term as? Number {
+                    numbers.append(num)
+                } else {
+                    other.append(term)
+                }
+            }
+            // Add all the numbers found
+            if(numbers.count > 1) {
+                var sum: Double = 0
+                for num in numbers {
+                    sum += num.value
+                }
+                other.append(Number(sum))
+            } else if(numbers.count == 1) {
+                other.append(contentsOf: numbers)
+            }
+            return Add(other)
+        }
+
+        func combineLike(_ node: Add) -> Add {
+            var args = node.arguments
+            var reducedTerms: [Node] = []
+            var i = 0
+            while(i < args.count) {
+                var current = args[i]
+                var multiple: Node = Number(1)
+                if let mul = current as? Multiply {
+                    current = mul.arguments[0]
+                    multiple = Multiply(Array<Node>(mul.arguments[1..<mul.arguments.count]))
+                }
+                var j = i + 1
+                while(j < args.count) {
+                    if(args[j] == current) {
+                        multiple = Add(multiple, Number(1))
+                        args.remove(at: args.startIndex + j)
+                        j -= 1
+                    }
+                    j += 1
+                }
+
+                reducedTerms.append(Multiply(current, multiple).simplify())
+                i += 1
+            }
+
+            return Add(reducedTerms)
+        }
+
+        func sortNodes(_ node: Add) -> Add {
+            return Add(node.arguments.sorted())
+        }
+
+        func removeZero(_ node: Add) -> Add {
+            var args = node.arguments
+            args.removeAll(where: {$0 == Number(0)})
+            return Add(args)
+        }
+
+        func terminal(_ node: Add) -> Node {
+            if(node.arguments.count == 1) {
+                return node.arguments[0]
+            } else if(node.arguments.count == 0) {
+                return Number(0)
+            } else {
+                return node
+            }
+        }
+
+        var args = self.arguments.map({$0.simplify()})
+        var simplifiedAdd = Add(args)
+
+        simplifiedAdd = level(simplifiedAdd)
+        simplifiedAdd = combineNumbers(simplifiedAdd)
+        simplifiedAdd = combineLike(simplifiedAdd)
+        simplifiedAdd = sortNodes(simplifiedAdd)
+
+        return terminal(simplifiedAdd)
     }
 }
 
@@ -485,26 +464,15 @@ public class Subtract: Node, Operation {
     }
     
     override public var latex: String {
-        var leftString = "\(self.left.latex)"
-        var rightString = "\(self.right.latex)"
-        
-        // Wrap the sides if needed
-        if let op = self.left as? Operation {
-            if(op.precedence <= self.precedence && op.type == .infix) {
-                leftString = "(\(leftString))"
-            }
-        }
-        if let op = self.right as? Operation {
-            if(op.precedence <= self.precedence && op.type == .infix) {
-                rightString = "(\(rightString))"
-            }
-        }
-        
-        return "\(leftString)-\(rightString)"
+        return self.description
     }
     
     override public var variables: Set<String> {
         return self.left.variables + self.right.variables
+    }
+
+    override public var typeIdentifier: String {
+        return "subtraction"
     }
     
     required public init(_ params: [Node]) {
@@ -533,6 +501,14 @@ public class Subtract: Node, Operation {
         return try self.left.evaluate(withValues: values) - self.right.evaluate(withValues: values)
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let sub = otherNode as? Subtract {
+            return self.left.equals(sub.left) && self.right.equals(sub.right)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Subtract.self) {
@@ -543,39 +519,19 @@ public class Subtract: Node, Operation {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.right.id == id) {
-            self.right = replacement
-            return true
-        } else if(self.left.id == id) {
-            self.left = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.left.replace(id: id, with: replacement) || self.right.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-
-        // Try left, then fall bacl to right
-        if let node = self.left.getNode(withId: id) {
-            return node
-        } else {
-            return self.right.getNode(withId: id)
-        }
-    }
-
     public override func simplify() -> Node {
-        return Add(self.left.simplify(), Multiply(Number(-1), self.right.simplify()))
+        let leftSimplified = self.left.simplify()
+        let rightSimplified = self.right.simplify()
+
+        // Test if both are numbers
+        let leftIsNum = leftSimplified as? Number != nil
+        let rightIsNum = rightSimplified as? Number != nil
+
+        if(leftIsNum && rightIsNum) {
+            return Number((leftSimplified as! Number).value - (rightSimplified as! Number).value)
+        }
+        
+        return Add(leftSimplified, Multiply(Number(-1), rightSimplified).simplify()).simplify()
     }
 }
 
@@ -588,75 +544,103 @@ public class Multiply: Node, Operation {
     public let identifier: String = "*"
     
     // Store the parameters for the node
-    public var left: Node
-    public var right: Node
+    public var arguments: [Node]
     
     override public var description: String {
-        var leftString = "\(self.left)"
-        var rightString = "\(self.right)"
-        
-        // Wrap the sides if needed
-        if let op = self.left as? Operation {
-            if(op.precedence <= self.precedence && op.type == .infix) {
-                leftString = "(\(leftString))"
+        var str = ""
+
+        for i in 0..<self.arguments.count-1 {
+            if let op = self.arguments[i] as? Operation {
+                if(op.precedence <= self.precedence && op.type == .infix) {
+                    str += "(\(op))"
+                } else {
+                    str += "\(op)"
+                }
+            } else {
+                str += self.arguments[i].description
             }
-        }
-        if let op = self.right as? Operation {
-            if(op.precedence <= self.precedence && op.type == .infix) {
-                rightString = "(\(rightString))"
-            }
+            str += "*"
         }
         
-        return "\(leftString)*\(rightString)"
+        if let op = self.arguments[self.arguments.count-1] as? Operation {
+            if(op.precedence <= self.precedence && op.type == .infix) {
+                str += "(\(op))"
+            } else {
+                str += "\(op)"
+            }
+        } else {
+            str += self.arguments[self.arguments.count-1].description
+        }
+        
+        return str
     }
     
     override public var latex: String {
-        var leftString = "\(self.left.latex)"
-        var rightString = "\(self.right.latex)"
-        
-        // Wrap the sides if needed
-        if let op = self.left as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
-                leftString = "(\(leftString))"
-            }
-        }
-        if let op = self.right as? Operation {
-            if(op.precedence < self.precedence && op.type == .infix) {
-                rightString = "(\(rightString))"
-            }
-        }
-        
-        return "\(leftString)\\cdot \(rightString)"
+        return self.description
     }
     
     override public var variables: Set<String> {
-        return self.left.variables + self.right.variables
+        var variables: Set<String> = []
+        
+        for arg in self.arguments {
+            variables = variables + arg.variables
+        }
+
+        return variables
+    }
+
+    override public var typeIdentifier: String {
+        return "multiplication"
     }
     
     required public init(_ params: [Node]) {
-        self.left = params[0]
-        self.right = params[1]
+        self.arguments = params
     }
 
     override required public init() {
-        self.left = Node()
-        self.right = Node()
+        self.arguments = []
         super.init()
     }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
+
+    public convenience init(_ params: Node...) {
+        self.init(params)
     }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
-        guard let left = self.left.getSymbol(using: type) else {return nil}
-        guard let right = self.right.getSymbol(using: type) else {return nil}
-        return Engine.multiply(left, right)
+        var terms: [Engine.Symbol] = []
+        for term in self.arguments {
+            if let termn = term.getSymbol(using: type) {
+                terms.append(termn)
+            } else {
+                return nil
+            }
+        }
+        return Engine.multiply(terms)
     }
     
     @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
-        return try self.left.evaluate(withValues: values) * self.right.evaluate(withValues: values)
+        var current: Double = 1
+        for arg in self.arguments {
+            current *= try arg.evaluate(withValues: values)
+        }
+        return current
+    }
+
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let mul = otherNode as? Multiply {
+            if(self.arguments.count == mul.arguments.count) {
+                var isEqual = true
+                for i in 0..<self.arguments.count {
+                    isEqual = isEqual && (self.arguments[i].equals(mul.arguments[i]))
+                }
+                return isEqual
+            } else {
+                return false
+            }
+        } else {
+            return false
+        }
     }
 
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
@@ -664,40 +648,146 @@ public class Multiply: Node, Operation {
         if(nodeType == Multiply.self) {
             ids.append(self.id)
         }
-        ids.append(contentsOf: self.left.contains(nodeType: nodeType))
-        ids.append(contentsOf: self.right.contains(nodeType: nodeType))
+        for arg in self.arguments {
+            ids.append(contentsOf: arg.contains(nodeType: nodeType))
+        }
+
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+    public override func simplify() -> Node {
+
+        func level(_ node: Multiply) -> Multiply {
+            // Level the operator to only one level of multipliation
+            var leveled: [Node] = []
+            for term in node.arguments {
+                if let mul = term as? Multiply {
+                    leveled.append(contentsOf: mul.arguments)
+                } else {
+                    leveled.append(term)
+                }
+            }
+            return Multiply(leveled)
         }
 
-        // Replace children
-        if(self.right.id == id) {
-            self.right = replacement
-            return true
-        } else if(self.left.id == id) {
-            self.left = replacement
-            return true
+        func combineNumbers(_ node: Multiply) -> Multiply {
+            // combine all numbers
+            var numbers: [Number] = []
+            var other: [Node] = []
+            for term in node.arguments {
+                if let num = term as? Number {
+                    numbers.append(num)
+                } else {
+                    other.append(term)
+                }
+            }
+            if(numbers.count > 1) {
+                var sum: Double = 1
+                for num in numbers {
+                    sum *= num.value
+                }
+                other.append(Number(sum))
+            } else if(numbers.count == 1) {
+                other.append(contentsOf: numbers)
+            }
+            return Multiply(other)
         }
 
-        // Recursively(ish) search children
-        return try self.left.replace(id: id, with: replacement) || self.right.replace(id: id, with: replacement)
-    }
+        func fractionProduct(_ node: Multiply) -> Node {
+            // We want (a/b)*(c/d) --> (a*c)/(b*d)
+            var tops: [Node] = []
+            var bottoms: [Node] = []
+            for term in node.arguments {
+                if let div = term as? Divide {
+                    tops.append(div.left)
+                    bottoms.append(div.right)
+                } else {
+                    tops.append(term)
+                }
+            }
 
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
+            tops.sort()
+            bottoms.sort()
+
+            // We call simplify again because not everything may be level anymore
+            if(bottoms.count == 0) {
+                if(tops.count == 1) {
+                    return tops[0]
+                } else {
+                    return Multiply(tops)
+                }
+            } else if(bottoms.count == 1) {
+                if(tops.count == 1) {
+                    return Divide(tops[0], bottoms[0])
+                } else {
+                    return Divide(Multiply(tops).simplify(), bottoms[0])
+                }
+            } else {
+                if(tops.count == 1) {
+                    return Divide(tops[0], Multiply(bottoms).simplify())
+                } else {
+                    return Divide(Multiply(tops).simplify(), Multiply(bottoms).simplify())
+                }
+            }
         }
 
-        // Try left, then fall bacl to right
-        if let node = self.left.getNode(withId: id) {
-            return node
-        } else {
-            return self.right.getNode(withId: id)
+        func combineLike(_ node: Multiply) -> Multiply {
+            var args = node.arguments
+            var reducedTerms: [Node] = []
+            var i = 0
+            while(i < args.count) {
+                var current = args[i]
+                var exponent: Node = Number(1)
+                if let pow = current as? Power {
+                    current = pow.left
+                    exponent = pow.right
+                }
+                var j = i + 1
+                while(j < args.count) {
+                    if(args[j] == current) {
+                        exponent = Add(exponent, Number(1))
+                        args.remove(at: args.startIndex + j)
+                        j -= 1
+                    } else if let pow = args[j] as? Power {
+                        if(pow.left == current) {
+                            exponent = Add(exponent, pow.right)
+                            args.remove(at: args.startIndex + j)
+                            j -= 1
+                        }
+                    }
+                    j += 1
+                }
+
+                reducedTerms.append(Power(current, exponent).simplify())
+                i += 1
+            }
+
+            return Multiply(reducedTerms)
         }
+
+        func removeOne(_ node: Multiply) -> Multiply {
+            var args = node.arguments
+            args.removeAll(where: {$0 == Number(1)})
+            return Multiply(args)
+        }
+
+        var args = self.arguments.map({$0.simplify()})
+
+        var simplifiedMul = Multiply(args)
+        simplifiedMul = level(simplifiedMul)
+        simplifiedMul = combineNumbers(simplifiedMul)
+        simplifiedMul = combineLike(simplifiedMul)
+        simplifiedMul = removeOne(simplifiedMul)
+
+        if(simplifiedMul.arguments.contains(Number(0))) {
+            return Number(0)
+        } else if(simplifiedMul.arguments.count == 1) {
+            return simplifiedMul.arguments[0]
+        } else if(simplifiedMul.arguments.count == 0) {
+            return Number(1)
+        }
+
+        return fractionProduct(simplifiedMul)
     }
 }
 
@@ -739,20 +829,25 @@ public class Divide: Node, Operation {
     override public var variables: Set<String> {
         return self.left.variables + self.right.variables
     }
+
+    override public var typeIdentifier: String {
+        return "division"
+    }
     
     required public init(_ params: [Node]) {
         self.left = params[0]
         self.right = params[1]
     }
 
+    public init(_ left: Node, _ right: Node) {
+        self.left = left
+        self.right = right
+    }
+
     override required public init() {
         self.left = Node()
         self.right = Node()
         super.init()
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
     }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
@@ -766,6 +861,14 @@ public class Divide: Node, Operation {
         return try self.left.evaluate(withValues: values) / self.right.evaluate(withValues: values)
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let div = otherNode as? Divide {
+            return self.left.equals(div.left) && self.right.equals(div.right)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Divide.self) {
@@ -775,35 +878,38 @@ public class Divide: Node, Operation {
         ids.append(contentsOf: self.right.contains(nodeType: nodeType))
         return ids
     }
+    
+    public override func simplify() -> Node {
+        let leftSimplified = self.left.simplify()
+        let rightSimplified = self.right.simplify()
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+        let leftIsNum = leftSimplified as? Number != nil
+        let rightIsNum = rightSimplified as? Number != nil
+
+        // Combine numbers into one
+        if(leftIsNum && rightIsNum) {
+            return Number((leftSimplified as! Number).value / (rightSimplified as! Number).value)
         }
 
-        // Replace children
-        if(self.right.id == id) {
-            self.right = replacement
-            return true
-        } else if(self.left.id == id) {
-            self.left = replacement
-            return true
-        }
+        let leftIsDiv = leftSimplified as? Divide != nil
+        let rightIsDiv = rightSimplified as? Divide != nil
 
-        // Recursively(ish) search children
-        return try self.left.replace(id: id, with: replacement) || self.right.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-
-        // Try left, then fall bacl to right
-        if let node = self.left.getNode(withId: id) {
-            return node
+        if(leftIsDiv && rightIsDiv) {
+            // We want (a/b)/(c/d) --> (a*d)/(b*c)
+            let leftDiv = leftSimplified as! Divide
+            let rightDiv = rightSimplified as! Divide
+            return Divide(leftDiv.left * rightDiv.right, leftDiv.right * rightDiv.left)
+        } else if(leftIsDiv && !rightIsDiv) {
+            // We want to simplify (a/b)/c --> a/(b*c)
+            let leftDiv = leftSimplified as! Divide
+            return Divide(leftDiv.left, leftDiv.right * rightSimplified)
+        } else if(!leftIsDiv && rightIsDiv) {
+            // We want a/(b/c) --> (a*c)/b
+            let rightDiv = rightSimplified as! Divide
+            return Divide(leftSimplified*rightDiv.right, rightDiv.left)
         } else {
-            return self.right.getNode(withId: id)
+            // Default case
+            return Divide(self.left.simplify(), self.right.simplify())
         }
     }
 }
@@ -852,20 +958,25 @@ public class Power: Node, Operation {
     override public var variables: Set<String> {
         return self.left.variables + self.right.variables
     }
+
+    override public var typeIdentifier: String {
+        return "power"
+    }
     
     required public init(_ params: [Node]) {
         self.left = params[0]
         self.right = params[1]
     }
 
+    public init(_ left: Node, _ right: Node) {
+        self.left = left
+        self.right = right
+    }
+
     override required public init() {
         self.left = Node()
         self.right = Node()
         super.init()
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
     }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
@@ -876,7 +987,15 @@ public class Power: Node, Operation {
     
     @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
-        return try pow(self.left.evaluate(withValues: values), self.right.evaluate(withValues: values))
+        return try Double.pow(self.left.evaluate(withValues: values), self.right.evaluate(withValues: values))
+    }
+
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let power = otherNode as? Power {
+            return self.left.equals(power.left) && self.right.equals(power.right)
+        } else {
+            return false
+        }
     }
 
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
@@ -889,35 +1008,22 @@ public class Power: Node, Operation {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
+    public override func simplify() -> Node {
+        let leftSimplified = self.left.simplify()
+        let rightSimplified = self.right.simplify()
+
+        let leftIsNum = leftSimplified as? Number != nil
+        let rightIsNum = rightSimplified as? Number != nil
+
+        if(rightIsNum && (rightSimplified as! Number) == Number(1)) {
+            return leftSimplified
+        } else if(rightIsNum && (rightSimplified as! Number) == Number(0)) {
+            return Number(1)
+        } else if(leftIsNum && rightIsNum) {
+            return Number(Double.pow((leftSimplified as! Number).value, (rightSimplified as! Number).value))
         }
 
-        // Replace children
-        if(self.right.id == id) {
-            self.right = replacement
-            return true
-        } else if(self.left.id == id) {
-            self.left = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.left.replace(id: id, with: replacement) || self.right.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-
-        // Try left, then fall bacl to right
-        if let node = self.left.getNode(withId: id) {
-            return node
-        } else {
-            return self.right.getNode(withId: id)
-        }
+        return Power(leftSimplified, rightSimplified)
     }
 }
 
@@ -957,22 +1063,26 @@ public class Factorial: Node, Operation {
     override public var variables: Set<String> {
         return self.argument.variables
     }
+
+    override public var typeIdentifier: String {
+        return "factorial"
+    }
     
     required public init(_ params: [Node]) {
         self.argument = params[0]
+    }
+
+    public init(_ param: Node) {
+        self.argument = param
     }
 
     override required public init() {
         self.argument = Node()
         super.init()
     }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
-        // TODO: Factorial in symbolic math protocol
+        // TODO: Define the general factorial
         return nil
     }
     
@@ -980,6 +1090,14 @@ public class Factorial: Node, Operation {
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         // TODO: Factorial evaluation
         throw SymbolLabError.notApplicable(message: "Factorial not implemented for the moment")
+    }
+
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let fact = otherNode as? Factorial {
+            return self.argument.equals(fact.argument)
+        } else {
+            return false
+        }
     }
 
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
@@ -991,28 +1109,8 @@ public class Factorial: Node, Operation {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-
-        // Try left, then fall bacl to right
-        return self.argument.getNode(withId: id)
+    public override func simplify() -> Node {
+        return Factorial(self.argument.simplify())
     }
 }
 

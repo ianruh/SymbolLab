@@ -5,7 +5,7 @@
 //  Created by Ian Ruh on 5/14/20.
 //
 
-public class Node: CustomStringConvertible {
+public class Node: CustomStringConvertible, Comparable {
 
     //------------------------ Properties ------------------------
 
@@ -27,6 +27,11 @@ public class Node: CustomStringConvertible {
         preconditionFailure("variables should be overridden")
     }
 
+    /// The type identifier of the class. This should be overriden.
+    public var typeIdentifier: String {
+        preconditionFailure("variables should be overridden")
+    }
+
     /// Determine if the node is basic
     public var isBasic: Bool {
         return self as? Number != nil || self as? Variable != nil
@@ -35,6 +40,11 @@ public class Node: CustomStringConvertible {
     /// Dertermine if the node is a variable
     public var isVariable: Bool {
         return self as? Variable != nil
+    }
+
+    /// Dertermine if the node is a variable
+    public var isNumber: Bool {
+        return self as? Number != nil
     }
 
     /// Determine if the node is an operation
@@ -72,6 +82,13 @@ public class Node: CustomStringConvertible {
         preconditionFailure("This method must be overridden")
     }
 
+    /// Function returns whether the other node logically equals this function
+    /// Note that this assumes both sides are simplified already, so it doesn't
+    /// call simplify itself.
+    internal func equals(_ otherNode: Node) -> Bool {
+        preconditionFailure("This method must be overridden")
+    }
+
     /// Get the count of how many of the given elements are in the node.
     ///
     /// - Parameter nodeType: Type interested in
@@ -105,12 +122,46 @@ public class Node: CustomStringConvertible {
     public func simplify() -> Node {
         preconditionFailure("This method must be overridden")
     }
+
+    //--------------Comparable Conformance-----------------
+
+    public static func ==(_ lhs: Node, _ rhs: Node) -> Bool {
+        return lhs.simplify().equals(rhs.simplify())
+    }
+
+    /// Only does a cursory comparison of types. Will be correct for numbers and variables,
+    /// nut otherwise only compares the types of the nodes.
+    ///
+    /// Opertions < Variables < Numbers
+    public static func <(_ lhs: Node, _ rhs: Node) -> Bool {
+        if(lhs.isOperation && rhs.isOperation) {
+            return lhs.typeIdentifier < rhs.typeIdentifier
+        } else if(lhs.isOperation &&  rhs.isBasic) {
+            return true
+        } else if(lhs.isBasic && rhs.isOperation) {
+            return false
+        } else if(lhs.isVariable && rhs.isVariable) {
+            return (lhs as! Variable).string < (rhs as! Variable).string
+        } else if(lhs.isVariable && rhs.isNumber) {
+            return true
+        } else if(lhs.isNumber && rhs.isVariable) {
+            return false
+        } else if(lhs.isNumber && rhs.isNumber) {
+            return (lhs as! Number).value < (rhs as! Number).value
+        } else {
+            // This shouldn't ever run, but just in case
+            preconditionFailure("Less than last case should never run")
+            return lhs.typeIdentifier < rhs.typeIdentifier
+        }
+    }
 }
 
-public class Number: Node, ExpressibleByIntegerLiteral {
+public class Number: Node, ExpressibleByIntegerLiteral, ExpressibleByFloatLiteral {
     public typealias IntegerLiteralType = Int
+    public typealias FloatLiteralType = Double
+    
 
-    public var value: Int
+    public var value: Double
     
     override public var description: String {
         return "\(self.value)"
@@ -119,16 +170,28 @@ public class Number: Node, ExpressibleByIntegerLiteral {
     override public var variables: Set<String> {
         return []
     }
+
+    override public var typeIdentifier: String {
+        return "\(self.value)"
+    }
     
     override public var latex: String {
         return "\(self.value)"
     }
     
-    public init(_ num: Int) {
+    public convenience init(_ num: Int) {
+        self.init(Double(num))
+    }
+
+    public init(_ num: Double) {
         self.value = num
     }
 
     required public convenience init(integerLiteral value: Int) {
+        self.init(Double(value))
+    }
+
+    required public convenience init(floatLiteral value: Double) {
         self.init(value)
     }
 
@@ -139,7 +202,15 @@ public class Number: Node, ExpressibleByIntegerLiteral {
     
     @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
-        return Double(self.value)
+        return self.value
+    }
+
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let num = otherNode as? Number {
+            return self.value == num.value
+        } else {
+            return false
+        }
     }
 
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
@@ -148,21 +219,6 @@ public class Number: Node, ExpressibleByIntegerLiteral {
         } else {
             return []
         }
-    }
-
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-        // There is nothing to replace, so just return false.
-        return false;
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return nil
     }
 
     public override func simplify() -> Node {
@@ -186,6 +242,10 @@ public class Variable: Node, ExpressibleByStringLiteral {
     
     override public var variables: Set<String> {
         return [self.string]
+    }
+
+    override public var typeIdentifier: String {
+        return self.string
     }
 
     public static func ==(_ lhs: Variable, _ rhs: Variable) -> Bool {
@@ -218,27 +278,20 @@ public class Variable: Node, ExpressibleByStringLiteral {
         return values[self.string]!
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let variable = otherNode as? Variable {
+            return self.string == variable.string
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         if(nodeType == Variable.self) {
             return [self.id]
         } else {
             return []
         }
-    }
-
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-        // There is nothing to replace, so just return false.
-        return false;
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return nil
     }
 
     public override func simplify() -> Node {

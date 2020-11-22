@@ -32,7 +32,7 @@ public struct SwiftBackend: SymbolLab.SymbolicMathEngine {
     /// - Parameter double: An double value to assign to the new symbol
     /// - Returns: The new symbol
     public static func new(_ double: Double) -> Symbol {
-        return SymbolLab.Decimal(floatLiteral: double)
+        return SymbolLab.Number(double)
     }
 
     /// Construct a symbol from an string. This just wraps a SymEngine.Symbol initializer

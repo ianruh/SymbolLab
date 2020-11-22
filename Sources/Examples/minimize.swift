@@ -6,16 +6,18 @@ func minimizeExample() {
     let y = Variable("y")
     let z = Variable("z")
 
-    let system: System = [
-        x + y ≈ 0,
-        x**3 + z ≈ 1
-    ]
+    print("Simplified: \((x*x*x).simplify())")
 
-    do {
-        let cost: Node = x*y
-        let (values, errors, iterations) = try system.minimize(cost, using: SwiftBackend.self)
-        print("Values: \(values)")
-    } catch {
-        print(error)
-    }
+    // let system: System = [
+    //     x + y ≈ 0,
+    //     x**3 + z ≈ 1
+    // ]
+
+    // do {
+    //     let cost: Node = x*y
+    //     let (values, errors, iterations) = try system.minimize(cost, using: SwiftBackend.self)
+    //     print("Values: \(values)")
+    // } catch {
+    //     print(error)
+    // }
 }

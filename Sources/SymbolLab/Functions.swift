@@ -37,82 +37,6 @@ extension Function {
 
 //######################### Define the functions #########################
 
-/**
- This is only for parsing to fit into the scheme. Otherwise it shouldn't be used because paretheses do nothing
- other than influence the order of operations.
- */
-public class Parentheses: Node, Function {
-    // No identifier
-    public let identifier: String = ""
-    public let numArguments: Int = 1
-    
-    public var param: Node // Store the parameter for the node
-    
-    override public var description: String {
-        return "(\(self.param))"
-    }
-    
-    override public var latex: String {
-        return "(\(self.param.latex))"
-    }
-    
-    override public var variables: Set<String> {
-        return self.param.variables
-    }
-    
-    required public init(_ params: [Node]) {
-        self.param = params[0]
-    }
-
-    override required public convenience init() {
-        self.init([Node()])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-
-    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
-        return self.param.getSymbol(using: type)
-    }
-    
-    @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
-        return try self.param.evaluate(withValues: values)
-    }
-
-    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
-        var ids: [Id] = []
-        if(nodeType == Parentheses.self) {
-            ids.append(self.id)
-        }
-        ids.append(contentsOf: self.param.contains(nodeType: nodeType))
-        return ids
-    }
-
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.param.id == id) {
-            self.param = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.param.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return self.param.getNode(withId: id)
-    }
-}
-
 public class Derivative: Node, Function {
     public let identifier: String = "d"
     public let numArguments: Int = 2
@@ -140,6 +64,10 @@ public class Derivative: Node, Function {
     override public var variables: Set<String> {
         return self.diffOf.variables + self.withRespectTo.variables
     }
+
+    override public var typeIdentifier: String {
+        return "derivative"
+    }
     
     required public init(_ params: [Node]) {
         self.diffOf = params[0]
@@ -152,10 +80,6 @@ public class Derivative: Node, Function {
 
     override required public convenience init() {
         self.init([Node(), Node()])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
     }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
@@ -175,25 +99,6 @@ public class Derivative: Node, Function {
     /// - Throws: If evaluation fails for some reason.
     @inlinable
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
-        // Try symbolically
-        // TODO: Symbolic derivative in evaluate
-//        do {
-//            guard let derSymbol: Symbol = self.symbol else {
-//                throw SymbolLabError.misc("Couldn't get derivative symbol for '\(self.description)'")
-//            }
-//            guard let derNode = Parser().parse(cString: derSymbol.symbolLabString) else {
-//                throw SymbolLabError.misc("Couldn't get derivative node for '\(derSymbol.description)'")
-//            }
-//
-//            return try derNode.evaluate(withValues: values)
-//        } catch {
-//            #if DEBUG
-//            print("""
-//                  Could not evaluate derivative symbolically because:
-//                  \(error)
-//                  """)
-//            #endif
-//        }
         // Try numerically
         guard let variable = self.withRespectTo as? Variable else {
             // TODO: Numerical derivatives with respect to non-variables (aka other functions)
@@ -211,6 +116,14 @@ public class Derivative: Node, Function {
         return try (self.diffOf.evaluate(withValues: x_forward) - self.diffOf.evaluate(withValues: x_back)) / (2*h)
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let dir = otherNode as? Derivative {
+            return self.withRespectTo.equals(dir.withRespectTo) && self.diffOf.equals(dir.diffOf)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Derivative.self) {
@@ -221,34 +134,8 @@ public class Derivative: Node, Function {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.diffOf.id == id) {
-            self.diffOf = replacement
-            return true
-        } else if(self.withRespectTo.id == id) {
-            self.withRespectTo = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.diffOf.replace(id: id, with: replacement) || self.withRespectTo.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-
-        if let node = self.diffOf.getNode(withId: id) {
-            return node
-        } else {
-            return self.withRespectTo.getNode(withId: id)
-        }
+    public override func simplify() -> Node {
+        return Derivative(of: self.diffOf.simplify(), wrt: self.withRespectTo.simplify())
     }
 }
 
@@ -281,6 +168,10 @@ public class Integral: Node, Function {
     override public var variables: Set<String> {
         return self.integrand.variables + self.withRespectTo.variables + self.lowerBound.variables + self.upperBound.variables
     }
+
+    override public var typeIdentifier: String {
+        return "integral"
+    }
     
     required public init(_ params: [Node]) {
         self.integrand = params[0]
@@ -292,10 +183,6 @@ public class Integral: Node, Function {
     override required public convenience init() {
         self.init([Node(), Node(), Node(), Node()])
     }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
         // TODO: Symbolic integration
@@ -306,6 +193,17 @@ public class Integral: Node, Function {
     override public func evaluate(withValues values: [String : Double]) throws -> Double {
         // TODO: Numerical integration
         throw SymbolLabError.notApplicable(message: "Can't evaluate integrals")
+    }
+
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let int = otherNode as? Integral {
+            return self.integrand.equals(int.integrand) && 
+                self.withRespectTo.equals(int.withRespectTo) && 
+                self.lowerBound.equals(int.lowerBound) && 
+                self.upperBound.equals(int.upperBound)
+        } else {
+            return false
+        }
     }
 
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
@@ -320,120 +218,8 @@ public class Integral: Node, Function {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.integrand.id == id) {
-            self.integrand = replacement
-            return true
-        } else if(self.withRespectTo.id == id) {
-            self.withRespectTo = replacement
-            return true
-        } else if(self.lowerBound.id == id) {
-            self.lowerBound = replacement
-            return true
-        } else if(self.upperBound.id == id) {
-            self.upperBound = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.integrand.replace(id: id, with: replacement) ||
-                self.withRespectTo.replace(id: id, with: replacement) ||
-                self.lowerBound.replace(id: id, with: replacement) ||
-                self.upperBound.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        if let node = self.integrand.getNode(withId: id) {
-            return node
-        } else if let node = self.withRespectTo.getNode(withId: id) {
-            return node
-        } else if let node = self.lowerBound.getNode(withId: id) {
-            return node
-        } else {
-            return self.upperBound.getNode(withId: id)
-        }
-    }
-}
-
-public class Expand: Node, Function {
-    public let identifier: String = "expand"
-    public let numArguments: Int = 1
-    
-    // Store the parameters for the node
-    public var argument: Node
-    
-    override public var description: String {
-        return "expand(\(self.argument))"
-    }
-    
-    // There is no equivalent of this as this isn't really mathematical
-    override public var latex: String {
-        return self.argument.latex
-    }
-    
-    override public var variables: Set<String> {
-        return self.argument.variables
-    }
-    
-    required public init(_ params: [Node]) {
-        self.argument = params[0]
-    }
-
-    override required public convenience init() {
-        self.init([Node()])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
-
-    override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
-        guard let param = self.argument.getSymbol(using: type) else {return nil}
-        return Engine.expand(param)
-    }
-    
-    @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
-        return try self.argument.evaluate(withValues: values)
-    }
-
-    override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
-        var ids: [Id] = []
-        if(nodeType == Expand.self) {
-            ids.append(self.id)
-        }
-        ids.append(contentsOf: self.argument.contains(nodeType: nodeType))
-        return ids
-    }
-
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return self.argument.getNode(withId: id)
+    public override func simplify() -> Node {
+        return Integral([self.integrand.simplify(), self.withRespectTo.simplify(), self.upperBound.simplify(), self.lowerBound.simplify()])
     }
 }
 
@@ -455,17 +241,21 @@ public class AbsoluteValue: Node, Function {
     override public var variables: Set<String> {
         return self.argument.variables
     }
+
+    override public var typeIdentifier: String {
+        return "absolutevalue"
+    }
     
     required public init(_ params: [Node]) {
         self.argument = params[0]
     }
 
+    public convenience init(_ param: Node) {
+        self.init([param])
+    }
+
     override required public convenience init() {
         self.init([Node()])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
     }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
@@ -479,6 +269,14 @@ public class AbsoluteValue: Node, Function {
         return val > 0 ? val: -1*val
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let abs = otherNode as? AbsoluteValue {
+            return self.argument.equals(abs.argument)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == AbsoluteValue.self) {
@@ -488,26 +286,8 @@ public class AbsoluteValue: Node, Function {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return self.argument.getNode(withId: id)
+    public override func simplify() -> Node {
+        return AbsoluteValue(self.argument.simplify())
     }
 }
 
@@ -529,17 +309,21 @@ public class ErrorFunction: Node, Function {
     override public var variables: Set<String> {
         return self.argument.variables
     }
+
+    override public var typeIdentifier: String {
+        return "errorfunction"
+    }
     
     required public init(_ params: [Node]) {
         self.argument = params[0]
     }
 
+    public convenience init(_ param: Node) {
+        self.init([param])
+    }
+
     override required public convenience init() {
         self.init([Node()])
-    }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
     }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
@@ -552,6 +336,14 @@ public class ErrorFunction: Node, Function {
         throw SymbolLabError.notApplicable(message: "erf not implemneted yet")
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let erf = otherNode as? ErrorFunction {
+            return self.argument.equals(erf.argument)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == ErrorFunction.self) {
@@ -561,26 +353,8 @@ public class ErrorFunction: Node, Function {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return self.argument.getNode(withId: id)
+    public override func simplify() -> Node {
+        return ErrorFunction(self.argument.simplify())
     }
 }
 
@@ -602,6 +376,10 @@ public class Sin: Node, Function {
     override public var variables: Set<String> {
         return self.argument.variables
     }
+
+    override public var typeIdentifier: String {
+        return "sine"
+    }
     
     required public init(_ params: [Node]) {
         self.argument = params[0]
@@ -614,10 +392,6 @@ public class Sin: Node, Function {
     override required public convenience init() {
         self.init([Node()])
     }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
         guard let param = self.argument.getSymbol(using: type) else {return nil}
@@ -629,6 +403,14 @@ public class Sin: Node, Function {
         return try .sin(self.argument.evaluate(withValues: values))
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let sin = otherNode as? Sin {
+            return self.argument.equals(sin.argument)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Sin.self) {
@@ -638,26 +420,8 @@ public class Sin: Node, Function {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return self.argument.getNode(withId: id)
+    public override func simplify() -> Node {
+        return Sin(self.argument.simplify())
     }
 }
 
@@ -679,6 +443,10 @@ public class Cos: Node, Function {
     override public var variables: Set<String> {
         return self.argument.variables
     }
+
+    override public var typeIdentifier: String {
+        return "cosine"
+    }
     
     required public init(_ params: [Node]) {
         self.argument = params[0]
@@ -691,10 +459,6 @@ public class Cos: Node, Function {
     override required public convenience init() {
         self.init([Node()])
     }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
         guard let param = self.argument.getSymbol(using: type) else {return nil}
@@ -706,6 +470,14 @@ public class Cos: Node, Function {
         return try .cos(self.argument.evaluate(withValues: values))
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let cos = otherNode as? Cos {
+            return self.argument.equals(cos.argument)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Cos.self) {
@@ -715,26 +487,8 @@ public class Cos: Node, Function {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return self.argument.getNode(withId: id)
+    public override func simplify() -> Node {
+        return Cos(self.argument.simplify())
     }
 }
 
@@ -756,6 +510,10 @@ public class Tan: Node, Function {
     override public var variables: Set<String> {
         return self.argument.variables
     }
+
+    override public var typeIdentifier: String {
+        return "tangent"
+    }
     
     required public init(_ params: [Node]) {
         self.argument = params[0]
@@ -768,10 +526,6 @@ public class Tan: Node, Function {
     override required public convenience init() {
         self.init([Node()])
     }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
         guard let param = self.argument.getSymbol(using: type) else {return nil}
@@ -783,6 +537,14 @@ public class Tan: Node, Function {
         return try .tan(self.argument.evaluate(withValues: values))
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let tan = otherNode as? Tan {
+            return self.argument.equals(tan.argument)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Tan.self) {
@@ -792,26 +554,8 @@ public class Tan: Node, Function {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return self.argument.getNode(withId: id)
+    public override func simplify() -> Node {
+        return Tan(self.argument.simplify())
     }
 }
 
@@ -833,6 +577,10 @@ public class Sqrt: Node, Function {
     override public var variables: Set<String> {
         return self.argument.variables
     }
+
+    override public var typeIdentifier: String {
+        return "squareroot"
+    }
     
     required public init(_ params: [Node]) {
         self.argument = params[0]
@@ -845,10 +593,6 @@ public class Sqrt: Node, Function {
     override required public convenience init() {
         self.init([Node()])
     }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
         guard let param  = self.argument.getSymbol(using: type) else {return nil}
@@ -860,6 +604,14 @@ public class Sqrt: Node, Function {
         return try .sqrt(self.argument.evaluate(withValues: values))
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let sqrt = otherNode as? Sqrt {
+            return self.argument.equals(sqrt.argument)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Sqrt.self) {
@@ -869,26 +621,8 @@ public class Sqrt: Node, Function {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return self.argument.getNode(withId: id)
+    public override func simplify() -> Node {
+        return Sqrt(self.argument.simplify())
     }
 }
 
@@ -910,6 +644,10 @@ public class Exp: Node, Function {
     override public var variables: Set<String> {
         return self.argument.variables
     }
+
+    override public var typeIdentifier: String {
+        return "exponential"
+    }
     
     required public init(_ params: [Node]) {
         self.argument = params[0]
@@ -922,10 +660,6 @@ public class Exp: Node, Function {
     override required public convenience init() {
         self.init([Node()])
     }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
         guard let param = self.argument.getSymbol(using: type) else {return nil}
@@ -937,6 +671,14 @@ public class Exp: Node, Function {
         return try  .exp(self.argument.evaluate(withValues: values))
     }
 
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let exp = otherNode as? Exp {
+            return self.argument.equals(exp.argument)
+        } else {
+            return false
+        }
+    }
+
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
         var ids: [Id] = []
         if(nodeType == Exp.self) {
@@ -946,26 +688,8 @@ public class Exp: Node, Function {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return self.argument.getNode(withId: id)
+    public override func simplify() -> Node {
+        return Exp(self.argument.simplify())
     }
 }
 
@@ -989,6 +713,10 @@ public class Log: Node, Function {
     override public var variables: Set<String> {
         return self.argument.variables
     }
+
+    override public var typeIdentifier: String {
+        return "logarithm"
+    }
     
     required public init(_ params: [Node]) {
         self.argument = params[0]
@@ -1001,10 +729,6 @@ public class Log: Node, Function {
     override required public convenience init() {
         self.init([Node()])
     }
-    
-    public func factory(_ params: [Node]) -> Node {
-        return Self(params)
-    }
 
     override public func getSymbol<Engine:SymbolicMathEngine>(using type: Engine.Type) -> Engine.Symbol? {
         guard let param = self.argument.getSymbol(using: type) else {return nil}
@@ -1013,7 +737,15 @@ public class Log: Node, Function {
 
     @inlinable
     override public func evaluate(withValues values: [String: Double]) throws -> Double {
-        return try .log(self.argument.evaluate(withValues: values))
+        return try Double.log(self.argument.evaluate(withValues: values))
+    }
+
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let log = otherNode as? Log {
+            return self.argument.equals(log.argument)
+        } else {
+            return false
+        }
     }
 
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
@@ -1025,25 +757,7 @@ public class Log: Node, Function {
         return ids
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-
-        // Replace children
-        if(self.argument.id == id) {
-            self.argument = replacement
-            return true
-        }
-
-        // Recursively(ish) search children
-        return try self.argument.replace(id: id, with: replacement)
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
-            return self
-        }
-        return self.argument.getNode(withId: id)
+    public override func simplify() -> Node {
+        return Log(self.argument.simplify())
     }
 }

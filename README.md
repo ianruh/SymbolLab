@@ -8,12 +8,12 @@ First off, at the moment, I only have a symbolic math backend written for [SymEn
 
 **Damped Oscillator**
 
-Next, we can start defining our system. First, we declare all of the variables we are going to need (I've declared the constants here as well using the `Decimal` type, but they could be put directly into the system as `-0.5` is further below).
+Next, we can start defining our system. First, we declare all of the variables we are going to need (I've declared the constants here as well using the `Number` type, but they could be put directly into the system as `-0.5` is further below).
 
 ```swift
-let m: Decimal = 1.0          // Mass
-let k: Decimal = 4.0          // Spring constant
-let b: Decimal = 0.4          // Damping parameter
+let m: Number = 1.0          // Mass
+let k: Number = 4.0          // Spring constant
+let b: Number = 0.4          // Damping parameter
 let ff = Variable("ff")                 // Damping force
 let fs = Variable("fs")                 // Spring force
 let x = Variable("x", initialValue: 2)  // Mass position
@@ -21,7 +21,7 @@ let v = Variable("v", initialValue: 0)  // Mass velocity
 let t = Variable("t")                   // Time
 ```
 
-The `Decimal` type is for decimal numbers (backed by doubles, not arbitrary precision). There is a coresponding type for integers (`Number`), though in most cases they will behave the same.
+The `Number` type is for numbers (backed by doubles, not arbitrary precision).
 
 The `Variable` type declares each variable we are going to use in the system. For the `x` and `v` variables, we provide an initial values along with the name because they are the two depedent variables in the system below:
 
