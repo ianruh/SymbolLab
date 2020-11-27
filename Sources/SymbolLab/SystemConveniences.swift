@@ -11,12 +11,12 @@ public extension System {
     ///   - maxIterations: Same as solve without range.
     /// - Returns: The array of values, the array of errors, and the array of iterations.
     /// - Throws: For many reasons. Look at the return message.
-    public func solve<Engine: SymbolicMathEngine>(overRange ranges: [String: Range<Double>],
+    public func solve<Engine: SymbolicMathEngine>(overRange ranges: [Node: Range<Double>],
                       withStride: Double,
-                      initialGuess: [String: Double] = [:],
+                      initialGuess: [Node: Double] = [:],
                       threshold: Double = 0.0001,
                       maxIterations: Int = 1000,
-                      using backend: Engine.Type) throws -> (values: [[String: Double]],
+                      using backend: Engine.Type) throws -> (values: [[Node: Double]],
                                                             error: [Double],
                                                             iterations: [Int]) {
 
@@ -26,7 +26,7 @@ public extension System {
         }
         let (variable, range) = ranges.first!
         // Make our array
-        let points: [String: [Double]] = [variable: Array(stride(from: range.lowerBound, to: range.upperBound, by: withStride))]
+        let points: [Node: [Double]] = [variable: Array(stride(from: range.lowerBound, to: range.upperBound, by: withStride))]
         return try self.solve(at: points, initialGuess: initialGuess, threshold: threshold, maxIterations: maxIterations, using: backend)
     }
 
@@ -41,12 +41,12 @@ public extension System {
     ///   - maxIterations: Same as solve without range.
     /// - Returns: The array of values, the array of errors, and the array of iterations.
     /// - Throws: For many reasons. Look at the return message.
-    public func solve<Engine: SymbolicMathEngine>(overRange ranges: [String: ClosedRange<Double>],
+    public func solve<Engine: SymbolicMathEngine>(overRange ranges: [Node: ClosedRange<Double>],
                       withStride: Double,
-                      initialGuess: [String: Double] = [:],
+                      initialGuess: [Node: Double] = [:],
                       threshold: Double = 0.0001,
                       maxIterations: Int = 1000,
-                      using backend: Engine.Type) throws -> (values: [[String: Double]],
+                      using backend: Engine.Type) throws -> (values: [[Node: Double]],
                                                             error: [Double],
                                                             iterations: [Int]) {
 
@@ -56,7 +56,7 @@ public extension System {
         }
         let (variable, range) = ranges.first!
         // Make our array
-        let points: [String: [Double]] = [variable: Array(stride(from: range.lowerBound, through: range.upperBound, by: withStride))]
+        let points: [Node: [Double]] = [variable: Array(stride(from: range.lowerBound, through: range.upperBound, by: withStride))]
         return try self.solve(at: points, initialGuess: initialGuess, threshold: threshold, maxIterations: maxIterations, using: backend)
     }
 
@@ -71,15 +71,15 @@ public extension System {
     ///   - maxIterations:
     /// - Returns:
     /// - Throws:
-    public func solve<Engine: SymbolicMathEngine>(at pointsDict: [String: [Double]],
-                      initialGuess: [String: Double] = [:],
+    public func solve<Engine: SymbolicMathEngine>(at pointsDict: [Node: [Double]],
+                      initialGuess: [Node: Double] = [:],
                       threshold: Double = 0.0001,
                       maxIterations: Int = 1000,
-                      using backend: Engine.Type) throws -> (values: [[String: Double]],
+                      using backend: Engine.Type) throws -> (values: [[Node: Double]],
                                                             error: [Double],
                                                             iterations: [Int]) {
         // Initialize the arrays that will store our data
-        var values: [[String:Double]] = []
+        var values: [[Node:Double]] = []
         var errors: [Double] = []
         var iterations: [Int] = []
         var guesses = initialGuess
@@ -105,10 +105,10 @@ public extension System {
 
         // Handle ODEs by passing them off to odeSolve
         var normalEqs: [Node] = []
-        var odes: [(node: Node, dep: Variable, ind: Variable, derId: Id)] = []
+        var odes: [(node: Node, dep: Variable, ind: Variable)] = []
         for eq in self.equations {
-            if let (dep, ind, derId) = eq.isODE {
-                odes.append((node: eq, dep: dep, ind: ind, derId: derId))
+            if let (dep, ind) = eq.isODE {
+                odes.append((node: eq, dep: dep, ind: ind))
             } else {
                 normalEqs.append(eq)
             }
@@ -127,7 +127,7 @@ public extension System {
         for point in points {
             // Add a temporary constraint for the current point
             // TODO: Don't construct the node by parsing. Fix this when you have math operators on nodes done
-            self.equations.append(Variable(variable) ~ Number(point))
+            self.equations.append(variable ~ Number(point))
             let (val, err, n) = try self.solve(guess: guesses, threshold: threshold, maxIterations: maxIterations, using: backend)
             values.append(val)
             errors.append(err)

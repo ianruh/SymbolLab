@@ -3,10 +3,13 @@ import SwiftBackend
 
 func minimizeExample() {
     let x = Variable("x")
-    let y = Variable("y")
-    let z = Variable("z")
+    // let y = Variable("y")
+    // let z = Variable("z")
 
-    print("Simplified: \((x*x*x).simplify())")
+    let expr2 = Cos([Power([x, Number(2)])])
+    let result2 = -1*Sin([Power([x, Number(2)])])*2*x
+    let der = SwiftBackend.diff(of: expr2, withRespectTo: x)!
+    let simp = der.simplify()
 
     // let system: System = [
     //     x + y ≈ 0,

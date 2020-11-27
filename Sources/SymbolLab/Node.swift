@@ -5,7 +5,7 @@
 //  Created by Ian Ruh on 5/14/20.
 //
 
-public class Node: CustomStringConvertible, Comparable {
+public class Node: CustomStringConvertible, Comparable, Hashable {
 
     //------------------------ Properties ------------------------
 
@@ -23,8 +23,13 @@ public class Node: CustomStringConvertible, Comparable {
     }
 
     /// The set of varibales in the node. This should be overridden.
-    public var variables: Set<String> {
+    public var variables: Set<Variable> {
         preconditionFailure("variables should be overridden")
+    }
+
+    /// The set of derivatives in the node. This should be overriden.
+    public var derivatives: Set<Derivative> {
+        preconditionFailure("derivatives should be overridden")
     }
 
     /// The type identifier of the class. This should be overriden.
@@ -58,15 +63,12 @@ public class Node: CustomStringConvertible, Comparable {
     }
 
     /// Determin if the node is and ODE. If so, return a tuple of the independent and dependent variable.
-    public var isODE: (dep: Variable, ind: Variable, derId: Id)? {
-        let ids = self.contains(nodeType: Derivative.self)
-        // Need one derivative
-        if(ids.count == 1) {
-            // Check the independent and dependent variables are just variables
-            guard let der = self.getNode(withId: ids[0]) as? Derivative else {fatalError("Something weird happened")}
-            guard let dep = der.diffOf as? Variable else {return nil}
-            guard let ind = der.withRespectTo as? Variable else {return nil}
-            return (dep: dep, ind: ind, derId: ids[0])
+    public var isODE: (dep: Variable, ind: Variable)? {
+        let derivatives = Array(self.derivatives)
+        if(derivatives.count > 1) {
+            guard let dep = derivatives[0].diffOf as? Variable else {return nil}
+            guard let ind = derivatives[0].withRespectTo as? Variable else {return nil}
+            return (dep: dep, ind: ind)
         }
         return nil
     }
@@ -78,7 +80,7 @@ public class Node: CustomStringConvertible, Comparable {
     }
 
     /// Evaluate the node. This should be overridden.
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
+    public func evaluate(withValues values: [Node: Double]) throws -> Double {
         preconditionFailure("This method must be overridden")
     }
 
@@ -123,10 +125,18 @@ public class Node: CustomStringConvertible, Comparable {
         preconditionFailure("This method must be overridden")
     }
 
+    public func hash(into hasher: inout Hasher) {
+        preconditionFailure("This method must be overriden")
+    }
+
     //--------------Comparable Conformance-----------------
 
     public static func ==(_ lhs: Node, _ rhs: Node) -> Bool {
-        return lhs.simplify().equals(rhs.simplify())
+        return lhs.equals(rhs)
+    }
+
+    public static func ~=(_ lhs: Node, _ rhs: Node) -> Bool {
+        return lhs.simplify() == rhs.simplify()
     }
 
     /// Only does a cursory comparison of types. Will be correct for numbers and variables,
@@ -167,7 +177,11 @@ public class Number: Node, ExpressibleByIntegerLiteral, ExpressibleByFloatLitera
         return "\(self.value)"
     }
 
-    override public var variables: Set<String> {
+    override public var variables: Set<Variable> {
+        return []
+    }
+
+    override public var derivatives: Set<Derivative> {
         return []
     }
 
@@ -201,7 +215,7 @@ public class Number: Node, ExpressibleByIntegerLiteral, ExpressibleByFloatLitera
     }
     
     @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [Node : Double]) throws -> Double {
         return self.value
     }
 
@@ -221,8 +235,13 @@ public class Number: Node, ExpressibleByIntegerLiteral, ExpressibleByFloatLitera
         }
     }
 
-    public override func simplify() -> Node {
+    override public func simplify() -> Node {
         return self
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("number")
+        hasher.combine(self.value)
     }
 }
 
@@ -240,8 +259,12 @@ public class Variable: Node, ExpressibleByStringLiteral {
         return "\(self.string)"
     }
     
-    override public var variables: Set<String> {
-        return [self.string]
+    override public var variables: Set<Variable> {
+        return [self]
+    }
+
+    override public var derivatives: Set<Derivative> {
+        return []
     }
 
     override public var typeIdentifier: String {
@@ -271,11 +294,12 @@ public class Variable: Node, ExpressibleByStringLiteral {
     }
     
     @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
-        guard values.keys.contains(self.string) else {
-            throw SymbolLabError.noValue(forVariable: self.string)
+    override public func evaluate(withValues values: [Node : Double]) throws -> Double {
+        if let value  = values[self] {
+            return value
+        } else {
+            throw SymbolLabError.noValue(forVariable: self.description)
         }
-        return values[self.string]!
     }
 
     override internal func equals(_ otherNode: Node) -> Bool {
@@ -294,7 +318,12 @@ public class Variable: Node, ExpressibleByStringLiteral {
         }
     }
 
-    public override func simplify() -> Node {
+    override public func simplify() -> Node {
         return self
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("variable")
+        hasher.combine(self.string)
     }
 }

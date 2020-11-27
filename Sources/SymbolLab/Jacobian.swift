@@ -42,7 +42,7 @@ public class Jacobian<Engine: SymbolicMathEngine>: CustomStringConvertible {
             // Make row
             var row: [Node] = []
             for variable in variables {
-                let node = Variable(variable)
+                let node = variable
                 guard let nodeSymbol = node.getSymbol(using: Engine.self) else {return nil}
                 guard let derivative = Engine.diff(of: eqSymbol, withRespectTo: nodeSymbol) else {return nil}
 //                print("Jacobian Derivative: \((derivative as! Node).description)")
@@ -54,12 +54,12 @@ public class Jacobian<Engine: SymbolicMathEngine>: CustomStringConvertible {
         }
     }
 
-    public func eval(_ values: [String: Double]) throws -> Matrix {
+    public func eval(_ values: [Node: Double]) throws -> Matrix {
         let variables = self.system.variableSequence
         // Check that all variables are represented
         for v in variables {
             if !values.keys.contains(v) {
-                throw SymbolLabError.noValue(forVariable: v)
+                throw SymbolLabError.noValue(forVariable: v.description)
             }
         }
         // Evaluate each element
@@ -77,7 +77,7 @@ public class Jacobian<Engine: SymbolicMathEngine>: CustomStringConvertible {
     Assume the values are in order of sequence
     */
     public func eval(_ vec: Vector) throws -> Matrix {
-        var map = [String: Double]()
+        var map = [Node: Double]()
         for i in 0..<vec.count {
             map[self.system.variableSequence[i]] = vec[i]
         }

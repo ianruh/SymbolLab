@@ -22,8 +22,8 @@ func rocket() {
         let plt = try Python.import("matplotlib.pyplot")
         let np = try Python.import("numpy")
 
-        let (values, errors, iterations) = try system.solve(at: ["mz": mzVals], using: SwiftBackend.self)
-        let deltaVVals = values.map({$0["deltaV"]!})
+        let (values, errors, iterations) = try system.solve(at: [mz: mzVals], using: SwiftBackend.self)
+        let deltaVVals = values.map({$0[deltaV]!})
 
         let dvarr = np.array(deltaVVals)
         plt.plot(dvarr)

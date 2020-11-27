@@ -12,8 +12,8 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     public typealias ArrayLiteralElement = Node
 
     /// The set of variables involved in the system's equations
-    public var variables: Set<String> {
-        var variables: Set<String> = []
+    public var variables: Set<Variable> {
+        var variables: Set<Variable> = []
         equations.forEach({ eq in
             variables = variables.union(eq.variables)
         })
@@ -34,7 +34,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     }
 
     /// The ordered sequence of variables used whil solving the system
-    public var variableSequence: [String] {
+    public var variableSequence: [Variable] {
         return self.variables.sorted()
     }
 
@@ -68,7 +68,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     ///   - maxIterations: The maximum number of iterations to perform before stopping.
     /// - Returns: A vector of solutions to the system, ordered as is the system's veriableSequence.
     /// - Throws: An error for many reasons. Look at error message for details.
-    public func solve<Engine: SymbolicMathEngine>(guess: [String: Double] = [:], threshold: Double = 0.0001, maxIterations: Int = 1000, using backend: Engine.Type) throws -> (values: [String: Double], error: Double, iterations: Int) {
+    public func solve<Engine: SymbolicMathEngine>(guess: [Node: Double] = [:], threshold: Double = 0.0001, maxIterations: Int = 1000, using backend: Engine.Type) throws -> (values: [Node: Double], error: Double, iterations: Int) {
         // Basic constraint check
         guard self.variables.count == self.equations.count else {
             throw SymbolLabError.misc("Unconstrained system.")
@@ -127,112 +127,11 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
             count += 1
         }
 
-        var retVal: [String: Double] = [:]
+        var retVal: [Node: Double] = [:]
         for i in 0..<self.variableSequence.count {
             retVal[self.variableSequence[i]] = x_current[i]
         }
         return (retVal, err, count)
-    }
-
-    /// Solve a system of or container ODEs
-    ///
-    /// - Parameters:
-    ///   - normalEqs:
-    ///   - odes:
-    ///   - pointsDict:
-    ///   - initialGuess: Must be complete already
-    ///   - threshold:
-    ///   - maxIterations:
-    ///   - backend:
-    /// - Returns:
-    /// - Throws:
-    internal static func odeSolve<Engine: SymbolicMathEngine>(normalEqs: [Node],
-                                                  odes: [(node: Node, dep: Variable, ind: Variable, derId: Id)],
-                                                  at pointsDict: [String: [Double]],
-                                                  initialGuess: [String: Double] = [:],
-                                                  threshold: Double = 0.0001,
-                                                  maxIterations: Int = 1000,
-                                                  using backend: Engine.Type) throws -> (values: [[String: Double]],
-                                                                                         error: [Double],
-                                                                                         iterations: [Int]) {
-        // Verify that all the independent ODE variables are the same
-        let indepedentVar = odes[0].ind
-        for ode in odes {
-            guard ode.ind == indepedentVar else {
-                throw SymbolLabError.multipleIndependentVariables("cannot have both '\(indepedentVar)' and '\(ode.ind)'")
-            }
-        }
-        // Verify that the points given are for the independent variable
-        guard let points = pointsDict[indepedentVar.string] else {
-            throw SymbolLabError.noValue(forVariable: "\(indepedentVar)")
-        }
-
-        // Construct normal system
-        let normalSystem = System(normalEqs)
-
-        // Dict to store the current values of all of dependent variables in the ODE
-        var currentDeps: [String: Double] = [:]
-        for ode in odes {
-            // Verify an initial value is given for all the indepedent ODE variables
-            guard let initv = ode.dep.initialValue else {
-                throw SymbolLabError.noValue(forVariable: "\(ode.dep) (no intial value given)")
-            }
-            currentDeps[ode.dep.string] = initv
-        }
-
-        // Replace all the derivatives with the new variables
-        var newODEs: [(node: Node, dep: Variable, ind: Variable, newVar: Variable)] = []
-        for ode in odes {
-            // TODO: This is a stupid way to make a unique string. Probablyu fix when everything is converted from string to variable
-            let newName = "\(ode.dep.string)d\(ode.ind.string)"
-            let newVar = Variable(newName)
-            _ = try ode.node.replace(id: ode.derId, with: newVar) // Will always return true, so we can ignore
-            newODEs.append((node: ode.node, dep: ode.dep, ind: ode.ind, newVar: newVar))
-        }
-
-        // Construct the ODE system
-        var odeSysArray: [Node] = []
-        for ode in newODEs {
-            odeSysArray.append(ode.node)
-        }
-        let odeSystem = System(odeSysArray)
-
-        // Storage for values, errors, and iterations
-        var values: [[String:Double]] = []
-        var errors: [Double] = []
-        var iterations: [Int] = []
-
-        // Loop through all the points
-        for i in 0..<points.count-1 {
-            // Construct the current constraints system
-            var constraints: [Node] = []
-            for ode in newODEs {
-                constraints.append(ode.dep ~ Number(currentDeps[ode.dep.string]!))
-            }
-
-            // Solve the system
-            let wholeSystem = normalSystem + odeSystem + System(constraints)
-            let (val, err, n) = try wholeSystem.solve(guess: initialGuess, threshold: threshold, maxIterations: maxIterations, using: backend)
-
-            // Update each dependent variable
-            let h = points[i+1] - points[i]
-            for ode in newODEs {
-                let next = currentDeps[ode.dep.string]! + h*val[ode.newVar.string]!
-                currentDeps[ode.dep.string] = next
-            }
-
-            // Store the values
-            errors.append(err)
-            iterations.append(n)
-            var iterValues: [String: Double] = [:]
-            for key in val.keys {
-                if(!newODEs.map({$0.newVar.string}).contains(key)) {
-                    iterValues[key] = val[key]
-                }
-            }
-            values.append(iterValues)
-        }
-        return (values: values, error: errors, iterations: iterations)
     }
 
     /// Evaluate the system at the point given by the dictionary of variables and values.
@@ -240,7 +139,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     /// - Parameter values: A dictionary of the value for each variable at the desired point.
     /// - Returns: The vector (ordered according to the variableSequence) for the value of the system at the point
     /// - Throws: On a multitude of occasions. Look at the error message for details.
-    public func eval(_ values: [String: Double]) throws -> Vector {
+    public func eval(_ values: [Node: Double]) throws -> Vector {
         var vec: Vector = []
         for eq in self.equations {
             try vec.append(eq.evaluate(withValues: values))
@@ -254,7 +153,7 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     /// - Returns: The vector for the value of the system at the point
     /// - Throws: On a multitude of occasions. Look at the error message for details
     public func eval(_ vec: Vector) throws -> Vector {
-        var map = [String: Double]()
+        var map = [Variable: Double]()
         guard vec.count == self.variables.count else {
             throw SymbolLabError.misc("Vector length doesn't match")
         }

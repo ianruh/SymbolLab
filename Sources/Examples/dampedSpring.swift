@@ -26,9 +26,9 @@ func dampedMassSpring() {
         let np = try Python.import("numpy")
 
         // Solve the system and extract the position and velocity
-        let (values, errors, iterations) = try system.solve(at: ["t": tVals], using: SwiftBackend.self)
-        var xVals = values.map({$0["x"]!})
-        var vVals = values.map({$0["v"]!})
+        let (values, errors, iterations) = try system.solve(at: [t: tVals], using: SwiftBackend.self)
+        var xVals = values.map({$0[x]!})
+        var vVals = values.map({$0[v]!})
 
         tVals.popLast() // xVals and vVals has one less element than tVals
 

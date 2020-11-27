@@ -9,17 +9,18 @@ import SwiftBackend
 final class JacobianTests: XCTestCase {
 
     func assertNodesEqual(_ node1: Node?, _ node2: Node, _ alternatives: [String] = [], file: StaticString = #file, line: UInt = #line) {
-        guard let node1n = node1 else {
-            XCTFail("nil is not equal to \(node2)")
-            return
-        }
-        if(alternatives.count > 0) {
-            if(!alternatives.contains(node1n.description)) {
-                XCTFail("The alternatives (\(alternatives)) do not include \(node1n.description)")
+        if let node1n = node1 {
+            let n1s = node1n.simplify()
+            let n2s = node2.simplify()
+            if(!(n1s == n2s)) {
+                XCTFail("'\(n1s)' is not equal to '\(n2s)'. Simplified from '\(node1n)' and '\(node2)'.")
+            } else {
+                XCTAssert(true)
             }
         } else {
-            XCTAssertEqual(node1n.description, node2.description)
+            XCTFail("node1 was nil")
         }
+
     }
 
     func testOneByOne() {
@@ -33,7 +34,7 @@ final class JacobianTests: XCTestCase {
         }
 
         let result = Number(2)
-        assertNodesEqual(jacobian.elements[0][0], result, ["2.0*1"])
+        assertNodesEqual(jacobian.elements[0][0], result)
     }
 
 

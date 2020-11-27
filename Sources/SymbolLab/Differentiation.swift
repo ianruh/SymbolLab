@@ -1,7 +1,6 @@
 //
 // Created by Ian Ruh on 11/2/20.
 //
-import SymbolLab
 
 /// Differentiate a given node.
 ///

@@ -117,7 +117,7 @@ Not if you value your job.
 
 *In order*
 
-- [ ] Symoblic math operations (simplification, cannonical forms, fix the derivative of variables) based on [this](http://www.math.wpi.edu/IQP/BVCalcHist/calc5.html#_Toc407004380).
+- [x] Symoblic math operations (simplification, cannonical forms, fix the derivative of variables) based on [this](http://www.math.wpi.edu/IQP/BVCalcHist/calc5.html#_Toc407004380).
 - [ ] Check the handling of implicit derivatives
 - [ ] Derivatives as solvable values
 - [ ] Assume Young's Theorem for the symmetry of partials

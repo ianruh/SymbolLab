@@ -9,7 +9,7 @@ public class Gradient: System {
         // Implicitly, every thing is assumed equal to 0, so if we run solve on the gradient, we'll
         // get when it is equal to 0.
         for variable in variables {
-            gradElements.append(Derivative(of: function, wrt: Variable(variable)))
+            gradElements.append(Derivative(of: function, wrt: variable))
         }
 
         super.init(gradElements)

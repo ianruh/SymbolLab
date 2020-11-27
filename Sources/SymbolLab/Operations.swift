@@ -85,12 +85,18 @@ public class Assign: Node, Operation {
         return "\(self.left.latex)=\(self.right.latex)"
     }
     
-    override public var variables: Set<String> {
+    override public var variables: Set<Variable> {
         return self.left.variables + self.right.variables
     }
 
+    override public var derivatives: Set<Derivative> {
+        return self.left.derivatives + self.right.derivatives
+    }
+
     override public var typeIdentifier: String {
-        return "assign"
+        var hasher = Hasher()
+        self.hash(into: &hasher)
+        return "assign\(hasher.finalize())"
     }
     
     required public init(_ params: [Node]) {
@@ -113,7 +119,7 @@ public class Assign: Node, Operation {
     }
     
     @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [Node : Double]) throws -> Double {
         throw SymbolLabError.notApplicable(message: "evaluate isn't applicable to assignment")
     }
 
@@ -138,6 +144,12 @@ public class Assign: Node, Operation {
     public override func simplify() -> Node {
         return Assign(self.left.simplify(), self.right.simplify())
     }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("assign")
+        hasher.combine(self.left)
+        hasher.combine(self.right)
+    }
 }
 
 /// A negative number
@@ -158,12 +170,18 @@ public class Negative: Node, Operation {
         return "-\(self.argument.latex)"
     }
     
-    override public var variables: Set<String> {
+    override public var variables: Set<Variable> {
         return self.argument.variables
     }
 
+    override public var derivatives: Set<Derivative> {
+        return self.argument.derivatives
+    }
+
     override public var typeIdentifier: String {
-        return "negative"
+        var hasher = Hasher()
+        self.hash(into: &hasher)
+        return "negative\(hasher.finalize())"
     }
     
     required public init(_ params: [Node]) {
@@ -187,7 +205,7 @@ public class Negative: Node, Operation {
     }
     
     @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [Node : Double]) throws -> Double {
         return try -1*self.argument.evaluate(withValues: values)
     }
 
@@ -210,6 +228,11 @@ public class Negative: Node, Operation {
 
     public override func simplify() -> Node {
         return Multiply(Number(-1), self.argument.simplify())
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("negative")
+        hasher.combine(self.argument)
     }
 }
 
@@ -257,8 +280,8 @@ public class Add: Node, Operation {
         return self.description
     }
     
-    override public var variables: Set<String> {
-        var variables: Set<String> = []
+    override public var variables: Set<Variable> {
+        var variables: Set<Variable> = []
         
         for arg in self.arguments {
             variables = variables + arg.variables
@@ -267,8 +290,20 @@ public class Add: Node, Operation {
         return variables
     }
 
+    override public var derivatives: Set<Derivative> {
+        var derivatives: Set<Derivative> = []
+        
+        for arg in self.arguments {
+            derivatives = derivatives + arg.derivatives
+        }
+
+        return derivatives
+    }
+
     override public var typeIdentifier: String {
-        return "addition"
+        var hasher = Hasher()
+        self.hash(into: &hasher)
+        return "addition\(hasher.finalize())"
     }
     
     required public init(_ params: [Node]) {
@@ -297,7 +332,7 @@ public class Add: Node, Operation {
     }
     
     @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [Node : Double]) throws -> Double {
         var sum: Double = 0
         for arg in self.arguments {
             sum = try sum + arg.evaluate(withValues: values)
@@ -381,7 +416,7 @@ public class Add: Node, Operation {
                 var multiple: Node = Number(1)
                 if let mul = current as? Multiply {
                     current = mul.arguments[0]
-                    multiple = Multiply(Array<Node>(mul.arguments[1..<mul.arguments.count]))
+                    multiple = Multiply(Array<Node>(mul.arguments[1..<mul.arguments.count])).simplify()
                 }
                 var j = i + 1
                 while(j < args.count) {
@@ -389,6 +424,12 @@ public class Add: Node, Operation {
                         multiple = Add(multiple, Number(1))
                         args.remove(at: args.startIndex + j)
                         j -= 1
+                    } else if let mul = args[j] as? Multiply {
+                        if(current == mul.arguments[0]) {
+                            multiple = Add(multiple, Multiply(Array<Node>(mul.arguments[1..<mul.arguments.count])).simplify())
+                            args.remove(at: args.startIndex + j)
+                            j -= 1
+                        }
                     }
                     j += 1
                 }
@@ -427,8 +468,14 @@ public class Add: Node, Operation {
         simplifiedAdd = combineNumbers(simplifiedAdd)
         simplifiedAdd = combineLike(simplifiedAdd)
         simplifiedAdd = sortNodes(simplifiedAdd)
+        simplifiedAdd = removeZero(simplifiedAdd)
 
         return terminal(simplifiedAdd)
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("add")
+        hasher.combine(self.arguments)
     }
 }
 
@@ -467,12 +514,18 @@ public class Subtract: Node, Operation {
         return self.description
     }
     
-    override public var variables: Set<String> {
+    override public var variables: Set<Variable> {
         return self.left.variables + self.right.variables
     }
 
+    override public var derivatives: Set<Derivative> {
+        return self.left.derivatives + self.right.derivatives
+    }
+
     override public var typeIdentifier: String {
-        return "subtraction"
+        var hasher = Hasher()
+        self.hash(into: &hasher)
+        return "subtraction\(hasher.finalize())"
     }
     
     required public init(_ params: [Node]) {
@@ -497,7 +550,7 @@ public class Subtract: Node, Operation {
     }
     
     @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [Node: Double]) throws -> Double {
         return try self.left.evaluate(withValues: values) - self.right.evaluate(withValues: values)
     }
 
@@ -532,6 +585,12 @@ public class Subtract: Node, Operation {
         }
         
         return Add(leftSimplified, Multiply(Number(-1), rightSimplified).simplify()).simplify()
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("subtract")
+        hasher.combine(self.left)
+        hasher.combine(self.right)
     }
 }
 
@@ -579,8 +638,8 @@ public class Multiply: Node, Operation {
         return self.description
     }
     
-    override public var variables: Set<String> {
-        var variables: Set<String> = []
+    override public var variables: Set<Variable> {
+        var variables: Set<Variable> = []
         
         for arg in self.arguments {
             variables = variables + arg.variables
@@ -589,8 +648,20 @@ public class Multiply: Node, Operation {
         return variables
     }
 
+    override public var derivatives: Set<Derivative> {
+        var derivatives: Set<Derivative> = []
+        
+        for arg in self.arguments {
+            derivatives = derivatives + arg.derivatives
+        }
+
+        return derivatives
+    }
+
     override public var typeIdentifier: String {
-        return "multiplication"
+        var hasher = Hasher()
+        self.hash(into: &hasher)
+        return "multiplication\(hasher.finalize())"
     }
     
     required public init(_ params: [Node]) {
@@ -619,7 +690,7 @@ public class Multiply: Node, Operation {
     }
     
     @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [Node: Double]) throws -> Double {
         var current: Double = 1
         for arg in self.arguments {
             current *= try arg.evaluate(withValues: values)
@@ -718,15 +789,15 @@ public class Multiply: Node, Operation {
                 }
             } else if(bottoms.count == 1) {
                 if(tops.count == 1) {
-                    return Divide(tops[0], bottoms[0])
+                    return Divide(tops[0], bottoms[0]).simplify()
                 } else {
-                    return Divide(Multiply(tops).simplify(), bottoms[0])
+                    return Divide(Multiply(tops).simplify(), bottoms[0]).simplify()
                 }
             } else {
                 if(tops.count == 1) {
-                    return Divide(tops[0], Multiply(bottoms).simplify())
+                    return Divide(tops[0], Multiply(bottoms).simplify()).simplify()
                 } else {
-                    return Divide(Multiply(tops).simplify(), Multiply(bottoms).simplify())
+                    return Divide(Multiply(tops).simplify(), Multiply(bottoms).simplify()).simplify()
                 }
             }
         }
@@ -779,6 +850,12 @@ public class Multiply: Node, Operation {
         simplifiedMul = combineLike(simplifiedMul)
         simplifiedMul = removeOne(simplifiedMul)
 
+        // Idk why, but combineLike seems to put multiples nested.
+        // TODO: Figure out why, something in combineLike. Look at second test in testDerivativeCos
+        // for an example of an issue.
+        simplifiedMul = level(simplifiedMul)
+        simplifiedMul = combineNumbers(simplifiedMul)
+
         if(simplifiedMul.arguments.contains(Number(0))) {
             return Number(0)
         } else if(simplifiedMul.arguments.count == 1) {
@@ -788,6 +865,11 @@ public class Multiply: Node, Operation {
         }
 
         return fractionProduct(simplifiedMul)
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("multiply")
+        hasher.combine(self.arguments)
     }
 }
 
@@ -826,12 +908,18 @@ public class Divide: Node, Operation {
         return "\\frac{\(self.left.latex)}{\(self.right.latex)}"
     }
     
-    override public var variables: Set<String> {
+    override public var variables: Set<Variable> {
         return self.left.variables + self.right.variables
     }
 
+    override public var derivatives: Set<Derivative> {
+        return self.left.derivatives + self.right.derivatives
+    }
+
     override public var typeIdentifier: String {
-        return "division"
+        var hasher = Hasher()
+        self.hash(into: &hasher)
+        return "division\(hasher.finalize())"
     }
     
     required public init(_ params: [Node]) {
@@ -857,7 +945,7 @@ public class Divide: Node, Operation {
     }
     
     @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [Node: Double]) throws -> Double {
         return try self.left.evaluate(withValues: values) / self.right.evaluate(withValues: values)
     }
 
@@ -880,6 +968,55 @@ public class Divide: Node, Operation {
     }
     
     public override func simplify() -> Node {
+        func toMulPowers(_ node: Node) -> Multiply {
+            switch node {
+            case let mul as Multiply:
+                return Multiply(mul.arguments.map({
+                    if let pow = $0 as? Power {
+                        return pow
+                    } else {
+                        return Power($0, Number(1))
+                    }
+                }))
+            case let pow as Power:
+                return Multiply(pow, Power(Number(1), Number(1)))
+            default:
+                return Multiply(Power(node, Number(1)), Power(Number(1), Number(1)))
+            }
+        }
+
+        func cancelTerms(_ node: Divide) -> Node {
+            var leftTerms: [Power] = toMulPowers(node.left).arguments as! [Power]
+            var rightTerms: [Power] = toMulPowers(node.right).arguments as! [Power]
+
+            for i in 0..<leftTerms.count {
+                for j in 0..<rightTerms.count {
+                    // Check the bases are the same
+                    if(leftTerms[i].left == rightTerms[j].left) {
+                        if(leftTerms[i].right > rightTerms[j].right) {
+                            leftTerms[i] = Power(leftTerms[i].left, Subtract(leftTerms[i].right, rightTerms[j].right))
+                            rightTerms[j] = Power(Number(1), Number(1))
+                        } else if(leftTerms[i].right < rightTerms[j].right) {
+                            rightTerms[j] = Power(rightTerms[j].left, Subtract(rightTerms[j].right, leftTerms[i].right))
+                            leftTerms[i] = Power(Number(1), Number(1))
+                        } else {
+                            rightTerms[j] = Power(Number(1), Number(1))
+                            leftTerms[i] = Power(Number(1), Number(1))
+                        }
+                    }
+                }
+            }
+
+            let leftSimplified = Multiply(leftTerms).simplify()
+            let rightSimplified = Multiply(rightTerms).simplify()
+
+            if(rightSimplified == Number(1)) {
+                return leftSimplified
+            } else {
+                return Divide(leftSimplified, rightSimplified)
+            }
+        }
+
         let leftSimplified = self.left.simplify()
         let rightSimplified = self.right.simplify()
 
@@ -898,19 +1035,30 @@ public class Divide: Node, Operation {
             // We want (a/b)/(c/d) --> (a*d)/(b*c)
             let leftDiv = leftSimplified as! Divide
             let rightDiv = rightSimplified as! Divide
-            return Divide(leftDiv.left * rightDiv.right, leftDiv.right * rightDiv.left)
+            return Divide(leftDiv.left * rightDiv.right, leftDiv.right * rightDiv.left).simplify()
         } else if(leftIsDiv && !rightIsDiv) {
             // We want to simplify (a/b)/c --> a/(b*c)
             let leftDiv = leftSimplified as! Divide
-            return Divide(leftDiv.left, leftDiv.right * rightSimplified)
+            return Divide(leftDiv.left, leftDiv.right * rightSimplified).simplify()
         } else if(!leftIsDiv && rightIsDiv) {
             // We want a/(b/c) --> (a*c)/b
             let rightDiv = rightSimplified as! Divide
-            return Divide(leftSimplified*rightDiv.right, rightDiv.left)
+            return Divide(leftSimplified*rightDiv.right, rightDiv.left).simplify()
         } else {
             // Default case
-            return Divide(self.left.simplify(), self.right.simplify())
+            if(rightSimplified == Number(1)) {
+                return leftSimplified
+            } else {
+                var simplifiedDiv: Divide = Divide(leftSimplified, rightSimplified)
+                return cancelTerms(simplifiedDiv)
+            }
         }
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("divide")
+        hasher.combine(self.left)
+        hasher.combine(self.right)
     }
 }
 
@@ -955,12 +1103,18 @@ public class Power: Node, Operation {
         return "\(leftString)^{\(self.right.latex)}"
     }
     
-    override public var variables: Set<String> {
+    override public var variables: Set<Variable> {
         return self.left.variables + self.right.variables
     }
 
+    override public var derivatives: Set<Derivative> {
+        return self.left.derivatives + self.right.derivatives
+    }
+
     override public var typeIdentifier: String {
-        return "power"
+        var hasher = Hasher()
+        self.hash(into: &hasher)
+        return "power\(hasher.finalize())"
     }
     
     required public init(_ params: [Node]) {
@@ -986,7 +1140,7 @@ public class Power: Node, Operation {
     }
     
     @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [Node: Double]) throws -> Double {
         return try Double.pow(self.left.evaluate(withValues: values), self.right.evaluate(withValues: values))
     }
 
@@ -1025,6 +1179,12 @@ public class Power: Node, Operation {
 
         return Power(leftSimplified, rightSimplified)
     }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("power")
+        hasher.combine(self.left)
+        hasher.combine(self.right)
+    }
 }
 
 /// Factorial of a node.
@@ -1060,12 +1220,18 @@ public class Factorial: Node, Operation {
         return "\(self.argument.latex)!"
     }
     
-    override public var variables: Set<String> {
+    override public var variables: Set<Variable> {
         return self.argument.variables
     }
 
+    override public var derivatives: Set<Derivative> {
+        return self.argument.derivatives
+    }
+
     override public var typeIdentifier: String {
-        return "factorial"
+        var hasher = Hasher()
+        self.hash(into: &hasher)
+        return "factorial\(hasher.finalize())"
     }
     
     required public init(_ params: [Node]) {
@@ -1087,7 +1253,7 @@ public class Factorial: Node, Operation {
     }
     
     @inlinable
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
+    override public func evaluate(withValues values: [Node: Double]) throws -> Double {
         // TODO: Factorial evaluation
         throw SymbolLabError.notApplicable(message: "Factorial not implemented for the moment")
     }
@@ -1111,6 +1277,11 @@ public class Factorial: Node, Operation {
 
     public override func simplify() -> Node {
         return Factorial(self.argument.simplify())
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("factorial")
+        hasher.combine(self.argument)
     }
 }
 

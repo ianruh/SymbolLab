@@ -6,6 +6,6 @@
 //
 import Foundation
 
-// dampedMassSpring()
+dampedMassSpring()
 //rocket()
-minimizeExample()
+// minimizeExample()
