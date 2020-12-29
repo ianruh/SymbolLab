@@ -63,12 +63,12 @@ public class Node: CustomStringConvertible, Comparable, Hashable {
     }
 
     /// Determin if the node is and ODE. If so, return a tuple of the independent and dependent variable.
-    public var isODE: (dep: Variable, ind: Variable)? {
+    public var isODE: (dep: Variable, ind: Variable, derId: Id)? {
         let derivatives = Array(self.derivatives)
         if(derivatives.count > 1) {
             guard let dep = derivatives[0].diffOf as? Variable else {return nil}
             guard let ind = derivatives[0].withRespectTo as? Variable else {return nil}
-            return (dep: dep, ind: ind)
+            return (dep: dep, ind: ind, derId: Id())
         }
         return nil
     }

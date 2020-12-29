@@ -105,10 +105,10 @@ public extension System {
 
         // Handle ODEs by passing them off to odeSolve
         var normalEqs: [Node] = []
-        var odes: [(node: Node, dep: Variable, ind: Variable)] = []
+        var odes: [(node: Node, dep: Variable, ind: Variable, derId: Id)] = []
         for eq in self.equations {
-            if let (dep, ind) = eq.isODE {
-                odes.append((node: eq, dep: dep, ind: ind))
+            if let (dep, ind, derId) = eq.isODE {
+                odes.append((node: eq, dep: dep, ind: ind, derId: derId))
             } else {
                 normalEqs.append(eq)
             }

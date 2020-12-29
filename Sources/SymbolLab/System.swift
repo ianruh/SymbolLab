@@ -20,6 +20,19 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         return variables
     }
 
+    public var derivatives: Set<Derivative> {
+        var derivatives: Set<Derivative> = []
+        equations.forEach({ eq in
+            derivatives = derivatives.union(eq.derivatives)
+        })
+        return derivatives
+    }
+
+    public var solvableEntities: Set<Node> {
+        var entities: Set<Node> = self.variables + self.derivatives
+        return entities
+    }
+
     /// The string representation of the system as a column array
     public var description: String {
         var str = "["

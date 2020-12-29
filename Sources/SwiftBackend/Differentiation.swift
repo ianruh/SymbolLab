@@ -21,7 +21,8 @@ internal func differentiate(_ term: Node, wrt variableNode: Node) -> Node? {
         if(vari == variable) {
             return Number(1)
         } else {
-            return Derivative(of: vari, wrt: variable)
+            // return Derivative(of: vari, wrt: variable)
+            return Number(0)
         }
     case let num as Number:
         return Number(0)
