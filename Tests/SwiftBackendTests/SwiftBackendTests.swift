@@ -35,6 +35,16 @@ final class SwiftBackendTests: XCTestCase {
         assertNodesEqual(SwiftBackend.diff(of: y, withRespectTo: x), result2)
     }
 
+    func testPartialVariable() {
+        let x = Variable("x")
+        let result = Number(1)
+        assertNodesEqual(SwiftBackend.diff(of: x, withRespectTo: x), result)
+
+        let y = Variable("y")
+        let result2 = Number(0)
+        assertNodesEqual(SwiftBackend.partial(of: y, withRespectTo: x), result2)
+    }
+
     func testDerivativeNumber() {
         let one = Number(1)
         let x = Variable("x")
@@ -42,11 +52,11 @@ final class SwiftBackendTests: XCTestCase {
         assertNodesEqual(SwiftBackend.diff(of: one, withRespectTo: x), result)
     }
 
-    func testDerivativeDecimal() {
-        let one = SymbolLab.Number(1.0)
+    func testPartialNumber() {
+        let one = Number(1)
         let x = Variable("x")
         let result = Number(0)
-        assertNodesEqual(SwiftBackend.diff(of: one, withRespectTo: x), result)
+        assertNodesEqual(SwiftBackend.partial(of: one, withRespectTo: x), result)
     }
 
     func testDerivativeNegative() {
@@ -54,6 +64,13 @@ final class SwiftBackendTests: XCTestCase {
         let nx = -1*x
         let result = -1*Number(1)
         assertNodesEqual(SwiftBackend.diff(of: nx, withRespectTo: x), result)
+    }
+
+    func testPartialNegative() {
+        let x = Variable("x")
+        let nx = -1*x
+        let result = -1*Number(1)
+        assertNodesEqual(SwiftBackend.partial(of: nx, withRespectTo: x), result)
     }
 
     func testDerivativeAdd() {
@@ -66,6 +83,18 @@ final class SwiftBackendTests: XCTestCase {
         let expr2 = x + y
         let result2 = Number(1) + Derivative(of: y, wrt: x)
         assertNodesEqual(SwiftBackend.diff(of: expr2, withRespectTo: x), result2)
+    }
+
+    func testPartialAdd() {
+        let x = Variable("x")
+        let expr = x + x
+        let result = Add([Number(1), Number(1)])
+        assertNodesEqual(SwiftBackend.partial(of: expr, withRespectTo: x), result)
+
+        let y = Variable("y")
+        let expr2 = x + y
+        let result2 = Number(1)
+        assertNodesEqual(SwiftBackend.partial(of: expr2, withRespectTo: x), result2)
     }
 
     func testDerivativeSub() {
@@ -82,6 +111,22 @@ final class SwiftBackendTests: XCTestCase {
         let expr3 = y - x
         let result3 = Derivative(of: y, wrt: x) - Number(1)
         assertNodesEqual(SwiftBackend.diff(of: expr3, withRespectTo: x), result3)
+    }
+
+    func testPartialSub() {
+        let x = Variable("x")
+        let expr = x - x
+        let result = Subtract([Number(1), Number(1)])
+        assertNodesEqual(SwiftBackend.partial(of: expr, withRespectTo: x), result)
+
+        let y = Variable("y")
+        let expr2 = x - y
+        let result2 = Number(1)
+        assertNodesEqual(SwiftBackend.partial(of: expr2, withRespectTo: x), result2)
+
+        let expr3 = y - x
+        let result3 = -1*Number(1)
+        assertNodesEqual(SwiftBackend.partial(of: expr3, withRespectTo: x), result3)
     }
 
     // TODO: Minimize the multiplication (part of overall simplification)
@@ -101,6 +146,22 @@ final class SwiftBackendTests: XCTestCase {
         assertNodesEqual(SwiftBackend.diff(of: expr3, withRespectTo: x), result3)
     }
 
+    func testPartialMultiply() {
+        let x = Variable("x")
+        let y = Variable("y")
+        let expr = x*x
+        let result = 2*x
+        assertNodesEqual(SwiftBackend.partial(of: expr, withRespectTo: x), result)
+
+        let expr2 = x*y
+        let result2 = y
+        assertNodesEqual(SwiftBackend.partial(of: expr2, withRespectTo: x), result2)
+
+        let expr3 = 2*x + x*y
+        let result3 = 2 + y
+        assertNodesEqual(SwiftBackend.partial(of: expr3, withRespectTo: x), result3)
+    }
+
     func testDerivativeDivision() {
         let x = Variable("x")
         let y = Variable("y")
@@ -116,6 +177,23 @@ final class SwiftBackendTests: XCTestCase {
         let expr3 = (y+x)/(y-x)
         let result3 = ((y-x)*(Derivative(of: y, wrt: x)+1) - (y+x)*(Derivative(of: y, wrt: x)-1)) / Power([(y-x), Number(2)])
         assertNodesEqual(SwiftBackend.diff(of: expr3, withRespectTo: x), result3)
+    }
+
+    func testPartialDivision() {
+        let x = Variable("x")
+        let y = Variable("y")
+
+        let expr = x / 2
+        let result =  Number(0.5)
+        assertNodesEqual(SwiftBackend.partial(of: expr, withRespectTo: x), result)
+
+        let expr2 = x / (x + 1)
+        let result2: Node = 1 / Power([(x+1), Number(2)])
+        assertNodesEqual(SwiftBackend.partial(of: expr2, withRespectTo: x), result2)
+
+        let expr3 = (y+x)/(y-x)
+        let result3 = ((y-x) + (y+x)) / Power([(y-x), Number(2)])
+        assertNodesEqual(SwiftBackend.partial(of: expr3, withRespectTo: x), result3)
     }
 
     func testDerivativePower() {
@@ -199,7 +277,6 @@ final class SwiftBackendTests: XCTestCase {
         ("Derivative Assign Test", testDerivativeAssign),
         ("Derivative Variable Test", testDerivativeVariable),
         ("Derivative Number Test", testDerivativeNumber),
-        ("Derivative Decimal Test", testDerivativeDecimal),
         ("Derivative Add Test", testDerivativeAdd),
         ("Derivative Subtract Test", testDerivativeSub),
         ("Derivative Multiply Test", testDerivativeMultiply),
@@ -210,5 +287,12 @@ final class SwiftBackendTests: XCTestCase {
         ("Derivative Tan Test", testDerivativeTan),
         ("Derivative Exp Test", testDerivativeExp),
         ("Derivative Log Test", testDerivativeLog),
+        ("Partial Variable Test", testPartialVariable),
+        ("Partial Number Test", testPartialNumber),
+        ("Partial Negative Test", testPartialNegative),
+        ("Partial Add Test", testPartialAdd),
+        ("Partial Subtract Test", testPartialSub),
+        ("Partial Multiply Test", testPartialMultiply),
+        ("Partial Division Test", testPartialDivision),
     ]
 }

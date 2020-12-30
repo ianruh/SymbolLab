@@ -1,6 +1,7 @@
 //
 // Created by Ian Ruh on 11/2/20.
 //
+
 import SymbolLab
 
 /// Differentiate a given node.
@@ -10,7 +11,7 @@ import SymbolLab
 ///   - variable:
 /// - Returns: The derivative, or nil for 0
 /// - Throws:
-internal func differentiate(_ term: Node, wrt variableNode: Node) -> Node? {
+internal func differentiate(_ term: Node, wrt variableNode: Node, partially: Bool) -> Node? {
     guard let variable = variableNode as? Variable else {
         // TODO: Figure out how to do this with matching
         preconditionFailure("Only can take derivative with respect to variables at the moment")
@@ -18,23 +19,32 @@ internal func differentiate(_ term: Node, wrt variableNode: Node) -> Node? {
 
     switch term {
     case let vari as Variable:
-        if(vari == variable) {
-            return Number(1)
+        if(partially) {
+            // Take the Partial derivative
+            if(vari == variable) {
+                return Number(1)
+            } else {
+                return Number(0)
+            }
         } else {
-            // return Derivative(of: vari, wrt: variable)
-            return Number(0)
+            // Take the total derivative
+            if(vari == variable) {
+                return Number(1)
+            } else {
+                return Derivative(of: vari, wrt: variable)
+            }
         }
     case let num as Number:
         return Number(0)
     case let assign as Assign:
         return nil
     case let negative as Negative:
-        return differentiate(negative, wrt: variable)
+        return differentiate(negative, wrt: variable, partially: partially)
     case let add as Add:
         var terms: [Node] = []
 
         for arg in add.arguments {
-            if let der = differentiate(arg, wrt: variable) {
+            if let der = differentiate(arg, wrt: variable, partially: partially) {
                 terms.append(der)
             } else {
                 return nil
@@ -43,8 +53,8 @@ internal func differentiate(_ term: Node, wrt variableNode: Node) -> Node? {
 
         return Add(terms)
     case let sub as Subtract:
-        let leftOp = differentiate(sub.left, wrt: variable)
-        let rightOp = differentiate(sub.right, wrt: variable)
+        let leftOp = differentiate(sub.left, wrt: variable, partially: partially)
+        let rightOp = differentiate(sub.right, wrt: variable, partially: partially)
 
         guard let left = leftOp else {
             return nil
@@ -59,10 +69,10 @@ internal func differentiate(_ term: Node, wrt variableNode: Node) -> Node? {
         for i in 2..<mul.arguments.count {
             current = BinaryMultiply(mul.arguments[i], current)
         }
-        return current.derivative(wrt: variable)
+        return current.derivative(wrt: variable, partially: partially)
     case let div as Divide:
-        let leftOp = differentiate(div.left, wrt: variable)
-        let rightOp = differentiate(div.right, wrt: variable)
+        let leftOp = differentiate(div.left, wrt: variable, partially: partially)
+        let rightOp = differentiate(div.right, wrt: variable, partially: partially)
 
         guard let left = leftOp else {
             return nil
@@ -76,8 +86,8 @@ internal func differentiate(_ term: Node, wrt variableNode: Node) -> Node? {
         // This one is a bit ugly, but here it is nicely written out:
         // https://en.wikipedia.org/wiki/Differentiation_rules#Generalized_power_rule
 
-        let dbaseOp = try differentiate(pow.left, wrt: variable)
-        let dpowerOp = try differentiate(pow.right, wrt: variable)
+        let dbaseOp = try differentiate(pow.left, wrt: variable, partially: partially)
+        let dpowerOp = try differentiate(pow.right, wrt: variable, partially: partially)
 
         guard let dbase = dbaseOp else {
             return nil
@@ -101,30 +111,30 @@ internal func differentiate(_ term: Node, wrt variableNode: Node) -> Node? {
         // TODO: Implement erf derivative
         return nil
     case let sin as Sin:
-        let darg = differentiate(sin.argument, wrt: variable)
+        let darg = differentiate(sin.argument, wrt: variable, partially: partially)
         if(darg != nil) {
             return Cos(sin.argument)*darg!
         } else {
             return nil
         }
     case let cos as Cos:
-        let darg = differentiate(cos.argument, wrt: variable)
+        let darg = differentiate(cos.argument, wrt: variable, partially: partially)
         if(darg != nil) {
             return -1*Sin(cos.argument)*darg!
         } else {
             return nil
         }
     case let tan as Tan:
-        let darg = differentiate(tan.argument, wrt: variable)
+        let darg = differentiate(tan.argument, wrt: variable, partially: partially)
         if(darg != nil) {
             return 1/(Power([Cos(tan.argument), Number(2)])) * darg!
         } else {
             return nil
         }
     case let sqrt as Sqrt:
-        return differentiate(Power([sqrt.argument, Number(0.5)]), wrt: variable)
+        return differentiate(Power([sqrt.argument, Number(0.5)]), wrt: variable, partially: partially)
     case let exp as Exp:
-        let dexp = differentiate(exp.argument, wrt: variable)
+        let dexp = differentiate(exp.argument, wrt: variable, partially: partially)
 
         if(dexp != nil) {
             return exp*dexp!
@@ -132,7 +142,7 @@ internal func differentiate(_ term: Node, wrt variableNode: Node) -> Node? {
             return nil
         }
     case let log as Log:
-        let dlog = differentiate(log.argument, wrt: variable)
+        let dlog = differentiate(log.argument, wrt: variable, partially: partially)
 
         if(dlog != nil) {
             return (1/log.argument)*dlog!
@@ -158,9 +168,9 @@ private struct BinaryMultiply {
         self.right = Multiply(right.left, right.right)
     }
 
-    func derivative(wrt variable: Node) -> Node? {
-        let dleftOp = differentiate(self.left, wrt: variable)
-        let drightOp = differentiate(self.right, wrt: variable)
+    func derivative(wrt variable: Node, partially: Bool) -> Node? {
+        let dleftOp = differentiate(self.left, wrt: variable, partially: partially)
+        let drightOp = differentiate(self.right, wrt: variable, partially: partially)
 
         guard let dleft = dleftOp else {
             return nil

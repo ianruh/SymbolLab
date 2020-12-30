@@ -81,10 +81,11 @@ public struct SwiftBackend: SymbolLab.SymbolicMathEngine {
     }
 
     public static func diff(of item: Symbol, withRespectTo: Symbol) -> Symbol? {
-        if let derivative = try differentiate(item, wrt: withRespectTo) {
-            return derivative
-        }
-        return nil
+        return differentiate(item, wrt: withRespectTo, partially: false)
+    }
+
+    public static func partial(of item: Symbol, withRespectTo: Symbol) -> Symbol? {
+        return differentiate(item, wrt: withRespectTo, partially: true)
     }
 
     public static func sin(_ term: Symbol) -> Symbol? {
