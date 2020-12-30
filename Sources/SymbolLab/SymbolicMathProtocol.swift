@@ -30,6 +30,7 @@ public protocol SymbolicMathEngine {
     
     // Calc
     static func diff(of item: Symbol, withRespectTo: Symbol) -> Symbol?
+    static func partial(of item: Symbol, withRespectTo: Symbol) -> Symbol?
     
     // Trig
     static func sin(_ term: Symbol) -> Symbol?

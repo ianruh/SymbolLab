@@ -118,8 +118,8 @@ Not if you value your job.
 *In order*
 
 - [x] Symoblic math operations (simplification, cannonical forms, fix the derivative of variables) based on [this](http://www.math.wpi.edu/IQP/BVCalcHist/calc5.html#_Toc407004380).
-- [ ] Check the handling of implicit derivatives
-- [ ] Derivatives as solvable values
+- [ ] Check the handling of implicit derivatives. I don't remeber what this was.
+- [ ] Derivatives as solvable values.
 - [ ] Assume Young's Theorem for the symmetry of partials
 - [ ] Implicit integration framework (euler, RK maybe)
 - [ ] Derivatives of the solution to ODE at furture time T.
