@@ -24,8 +24,11 @@ public class Derivative: Node, Function {
         return "\\frac{d \(topStr)}{d \(bottomStr)}"
     }
     
+    // TODO: Rename all of the variables properties to solvableVariables or some such thing
     override public var variables: Set<Variable> {
-        return self.diffOf.variables + self.withRespectTo.variables
+        // The variables in the top and the bottom aren't actually solvable, so we don't return them.
+        // return self.diffOf.variables + self.withRespectTo.variables
+        return []
     }
 
     override public var derivatives: Set<Derivative> {

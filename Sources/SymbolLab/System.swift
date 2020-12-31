@@ -83,14 +83,25 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
     /// - Throws: An error for many reasons. Look at error message for details.
     public func solve<Engine: SymbolicMathEngine>(guess: [Node: Double] = [:], threshold: Double = 0.0001, maxIterations: Int = 1000, using backend: Engine.Type) throws -> (values: [Node: Double], error: Double, iterations: Int) {
         // Basic constraint check
-        guard self.variables.count == self.equations.count else {
-            throw SymbolLabError.misc("Unconstrained system.")
+        guard self.solvableEntities.count == self.equations.count else {
+            throw SymbolLabError.misc("Badly constrained system: \(self.solvableEntities.count) solvable entities with \(self.equations.count) constraints")
         }
 
         // Reformat equations
         let originalEquations = self.equations
         self.equations = self.formatAssignments(self.equations)
         defer {self.equations = originalEquations} // Restore the original set
+
+        // Replace derivatives with variables
+        // TODO: Figure out how to avoid special $ variables
+        var derivativeReplacement: [Node: Node] = [:]
+        for derivative in self.derivatives {
+            let replacement = Variable("$d\(derivative.diffOf)d\(derivative.withRespectTo)")
+            derivativeReplacement[replacement] = derivative
+            for i in 0..<self.equations.count {
+                self.equations[i] = self.equations[i].replace(derivative, with: replacement)
+            }
+        }
 
         // Get the jacobian of the system
         guard let jacobian: Jacobian<Engine> = self.getJacobian() else {
@@ -144,6 +155,16 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         for i in 0..<self.variableSequence.count {
             retVal[self.variableSequence[i]] = x_current[i]
         }
+
+        // Restore the derivatives that were replaced previously
+        for key in retVal.keys {
+            if(derivativeReplacement.keys.contains(key)) {
+                let number: Double = retVal[key]!
+                retVal.removeValue(forKey: key)
+                retVal[derivativeReplacement[key]!] = number
+            }
+        }
+
         return (retVal, err, count)
     }
 

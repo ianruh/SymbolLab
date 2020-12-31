@@ -24,8 +24,9 @@ public class Partial: Node, Function {
         return "\\frac{∂ \(topStr)}{∂ \(bottomStr)}"
     }
     
+    // Look at note on Derivative.variables
     override public var variables: Set<Variable> {
-        return self.diffOf.variables + self.withRespectTo.variables
+        return []
     }
 
     override public var derivatives: Set<Derivative> {

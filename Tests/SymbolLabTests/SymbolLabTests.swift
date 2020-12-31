@@ -190,7 +190,7 @@ final class SymbolLabTests: XCTestCase {
         assertNodesEqual(exp3, res3)
     }
 
-    func testDerivativeSolving() {
+    func testDerivativeSolvingOne() {
         let x = Variable("x")
         let y = Variable("y")
 
@@ -203,7 +203,43 @@ final class SymbolLabTests: XCTestCase {
             let (values, errors, iterations) = try system.solve(using: SwiftBackend.self)
             let res = values[Derivative(of: x, wrt: y)]
             let expect = 8.0
-            XCTAssertEqual(res, expect)
+            if let resno = res {
+                XCTAssertEqual(resno, expect, accuracy: 0.00001)
+            } else {
+                XCTFail("Unexpectedly found nil in the solution to the system.")
+            }
+        } catch {
+            XCTFail("An unexpected error was thrown while solving the system: \(error)")
+        }
+    }
+
+    func testDerivativeSolvingTwo() {
+        // This test is adapted from the damped spring example
+        let m: Number = 1.0          // Mass
+        let k: Number = 4.0          // Spring constant
+        let b: Number = 0.4          // Damping parameter
+        let ff = Variable("ff")                 // Damping force
+        let fs = Variable("fs")                 // Spring force
+        let x = Variable("x")  // Mass position
+        let v = Variable("v")  // Mass velocity
+        let t = Variable("t")                   // Time
+
+        let system: System = [
+            ff ≈ -1.0 * b*v,                                        // Damping force
+            fs ≈ -0.5 * (k*x),                                      // Spring force
+            Derivative(of: v, wrt: t) ≈ (fs + ff)/m,
+            Derivative(of: x, wrt: t) ≈ v,
+            x ≈ 2.0,
+            v ≈ 0.0
+        ]
+
+        do {
+            let (values, errors, iterations) = try system.solve(using: SwiftBackend.self)
+
+            XCTAssertEqual(values[ff]!, 0.0, accuracy: 0.00001)
+            XCTAssertEqual(values[fs]!, -4.0, accuracy: 0.00001)
+            XCTAssertEqual(values[Derivative(of: v, wrt: t)]!, -4.0, accuracy: 0.00001)
+            XCTAssertEqual(values[Derivative(of: x, wrt: t)]!, 0.0, accuracy: 0.00001)
         } catch {
             XCTFail("An unexpected error was thrown while solving the system: \(error)")
         }
@@ -219,6 +255,7 @@ final class SymbolLabTests: XCTestCase {
         ("Identities", testIdentities),
         ("Hashable", testNodeHashable),
         ("Test Replace", testReplace),
-        ("Test Derivative Solving", testDerivativeSolving),
+        ("Test Derivative Solving #1", testDerivativeSolvingOne),
+        ("Test Derivative Solving #2", testDerivativeSolvingTwo),
     ]
 }
