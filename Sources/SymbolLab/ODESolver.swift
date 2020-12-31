@@ -170,7 +170,12 @@ public extension System {
 
             // Solve the system
             let wholeSystem = self + System(constraints)
-            let (val, err, n) = try wholeSystem.solve(guess: initialGuess, threshold: threshold, maxIterations: maxIterations, using: backend)
+            var guess = initialGuess
+            if(values.count > 0) {
+                // Use the previous solution as the next guess
+                guess = values.last!
+            }
+            let (val, err, n) = try wholeSystem.solve(guess: guess, threshold: threshold, maxIterations: maxIterations, using: backend)
 
             // Update each dependent variable
             let h = points[i+1] - points[i]
