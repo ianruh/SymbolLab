@@ -110,6 +110,11 @@ public class Node: CustomStringConvertible, Comparable, Hashable {
         preconditionFailure("This method must be overridden")
     }
 
+    /// Replace a node with another node.
+    @discardableResult public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        preconditionFailure("This method must be overridden.")
+    }
+
     /// Get the node with the given id.
     ///
     /// - Parameter id: Id of the node to get.
@@ -235,6 +240,14 @@ public class Number: Node, ExpressibleByIntegerLiteral, ExpressibleByFloatLitera
         }
     }
 
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
+            return self
+        }
+    }
+
     override public func simplify() -> Node {
         return self
     }
@@ -315,6 +328,14 @@ public class Variable: Node, ExpressibleByStringLiteral {
             return [self.id]
         } else {
             return []
+        }
+    }
+
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
+            return self
         }
     }
 

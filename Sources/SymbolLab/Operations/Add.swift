@@ -133,6 +133,14 @@ public class Add: Node, Operation {
         return ids
     }
 
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
+            return Add(self.arguments.map({$0.replace(targetNode, with: replacement)}))
+        }
+    }
+
     public override func simplify() -> Node {
 
         func level(_  node: Add) -> Add {

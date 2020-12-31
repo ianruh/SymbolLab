@@ -72,6 +72,14 @@ public class Exp: Node, Function {
         return Exp(self.argument.simplify())
     }
 
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
+            return Exp(self.argument.replace(targetNode, with: replacement))
+        }
+    }
+
     override public func hash(into hasher: inout Hasher) {
         hasher.combine("exp")
         hasher.combine(self.argument)

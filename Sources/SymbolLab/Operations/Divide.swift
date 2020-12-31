@@ -94,6 +94,14 @@ public class Divide: Node, Operation {
         ids.append(contentsOf: self.right.contains(nodeType: nodeType))
         return ids
     }
+
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
+            return Divide(self.left.replace(targetNode, with: replacement), self.right.replace(targetNode, with: replacement))
+        }
+    }
     
     public override func simplify() -> Node {
         func toMulPowers(_ node: Node) -> Multiply {

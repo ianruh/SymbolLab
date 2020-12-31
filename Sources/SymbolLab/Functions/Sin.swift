@@ -68,6 +68,14 @@ public class Sin: Node, Function {
         return ids
     }
 
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
+            return Sin(self.argument.replace(targetNode, with: replacement))
+        }
+    }
+
     public override func simplify() -> Node {
         return Sin(self.argument.simplify())
     }

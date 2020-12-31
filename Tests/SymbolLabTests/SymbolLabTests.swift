@@ -1,4 +1,5 @@
 import XCTest
+import SwiftBackend
 @testable import SymbolLab
 
 /// Note: These tested only what their name suggests as I was writing them. However, as the simplification code
@@ -171,15 +172,42 @@ final class SymbolLabTests: XCTestCase {
         XCTAssertNotNil(dict[der])
     }
 
-    // func testDerivativeSolving() {
-    //     let x = Variable("x")
-    //     let y = Variable("y")
+    func testReplace() {
+        let x = Variable("x")
+        let y = Variable("y")
+        let z = Variable("z")
 
-    //     let system: System = [
-    //         Derivative(of: x, wrt: y) ≈ 2*x,
-    //         x ≈ 4
-    //     ]
-    // }
+        let exp1 = y+y
+        let res1 = (x+x).replace(x, with: y)
+        assertNodesEqual(exp1, res1)
+
+        let exp2 = y
+        let res2 = (x*x).replace(x*x, with: y)
+        assertNodesEqual(exp2, res2)
+
+        let exp3 = z
+        let res3 = Derivative(of: x, wrt: y).replace(Derivative(of: x, wrt: y), with: z)
+        assertNodesEqual(exp3, res3)
+    }
+
+    func testDerivativeSolving() {
+        let x = Variable("x")
+        let y = Variable("y")
+
+        let system: System = [
+            Derivative(of: x, wrt: y) ≈ 2*x,
+            x ≈ 4
+        ]
+
+        do {
+            let (values, errors, iterations) = try system.solve(using: SwiftBackend.self)
+            let res = values[Derivative(of: x, wrt: y)]
+            let expect = 8.0
+            XCTAssertEqual(res, expect)
+        } catch {
+            XCTFail("An unexpected error was thrown while solving the system: \(error)")
+        }
+    }
 
     static var allTests = [
         ("Leveling Tests", testLeveling),
@@ -190,5 +218,7 @@ final class SymbolLabTests: XCTestCase {
         ("Combine Like", testCombineLike),
         ("Identities", testIdentities),
         ("Hashable", testNodeHashable),
+        ("Test Replace", testReplace),
+        ("Test Derivative Solving", testDerivativeSolving),
     ]
 }

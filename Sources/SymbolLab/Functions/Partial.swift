@@ -103,6 +103,14 @@ public class Partial: Node, Function {
         return ids
     }
 
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
+            return Partial(self.diffOf.replace(targetNode, with: replacement), self.withRespectTo.replace(targetNode, with: replacement))
+        }
+    }
+
     public override func simplify() -> Node {
         if let newNode = partial(of: self.diffOf.simplify(), wrt: self.withRespectTo.simplify()) {
             if let dif = newNode as? Partial {

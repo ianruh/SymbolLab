@@ -88,6 +88,14 @@ public class Integral: Node, Function {
         return ids
     }
 
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
+            return Integral([self.integrand.replace(targetNode, with: replacement), self.withRespectTo.replace(targetNode, with: replacement), self.upperBound.replace(targetNode, with: replacement), self.lowerBound.replace(targetNode, with: replacement)])
+        }
+    }
+
     public override func simplify() -> Node {
         return Integral([self.integrand.simplify(), self.withRespectTo.simplify(), self.upperBound.simplify(), self.lowerBound.simplify()])
     }

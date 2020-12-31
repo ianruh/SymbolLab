@@ -75,6 +75,14 @@ public class Negative: Node, Operation {
         return ids
     }
 
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
+            return Negative(self.argument.replace(targetNode, with: replacement))
+        }
+    }
+
     public override func simplify() -> Node {
         return Multiply(Number(-1), self.argument.simplify())
     }

@@ -101,6 +101,14 @@ public class Power: Node, Operation {
         return ids
     }
 
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
+            return Power(self.left.replace(targetNode, with: replacement), self.right.replace(targetNode, with: replacement))
+        }
+    }
+
     public override func simplify() -> Node {
         let leftSimplified = self.left.simplify()
         let rightSimplified = self.right.simplify()
