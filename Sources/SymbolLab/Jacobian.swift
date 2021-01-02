@@ -44,7 +44,7 @@ public class Jacobian<Engine: SymbolicMathEngine>: CustomStringConvertible {
             for variable in variables {
                 let node = variable
                 guard let nodeSymbol = node.getSymbol(using: Engine.self) else {return nil}
-                guard let derivative = Engine.diff(of: eqSymbol, withRespectTo: nodeSymbol) else {return nil}
+                guard let derivative = Engine.partial(of: eqSymbol, withRespectTo: nodeSymbol) else {return nil}
 //                print("Jacobian Derivative: \((derivative as! Node).description)")
                 guard let derivativeNode = Engine.constructNode(from: derivative) else {return nil}
                 row.append(derivativeNode)
@@ -67,7 +67,9 @@ public class Jacobian<Engine: SymbolicMathEngine>: CustomStringConvertible {
         for row in 0..<self.m {
             evaledJacobian.append([])
             for col in 0..<self.n {
-                evaledJacobian[row].append( try self.elements[row][col].evaluate(withValues: values) )
+                let nodep = self.elements[row][col]
+                let val = try nodep.evaluate(withValues: values)
+                evaledJacobian[row].append( val )
             }
         }
         return Matrix(evaledJacobian)

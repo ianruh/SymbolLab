@@ -50,7 +50,12 @@ public class Log: Node, Function {
 
     @inlinable
     override public func evaluate(withValues values: [Node: Double]) throws -> Double {
-        return try Double.log(self.argument.evaluate(withValues: values))
+        let value = try Double.log(self.argument.evaluate(withValues: values))
+        guard value != Double.nan else {
+            throw SymbolLabError.undefinedValue("The log(\(value)) is undefined.")
+        }
+
+        return value
     }
 
     override internal func equals(_ otherNode: Node) -> Bool {

@@ -245,6 +245,66 @@ final class SymbolLabTests: XCTestCase {
         }
     }
 
+    func testMinimizationOne() {
+        let x = Variable("x")
+        let y = Variable("y")
+
+        let system: System = [
+            x + y ≈ 2
+        ]
+
+        do {
+            let cost: Node = -1*x*y
+            let (values, errors, iterations) = try system.minimize(cost, using: SwiftBackend.self)
+            
+            XCTAssertEqual(values[x]!, 1.0, accuracy: 0.0001)
+            XCTAssertEqual(values[y]!, 1.0, accuracy: 0.0001)
+
+        } catch {
+            XCTFail("An unexpected error occured while minimizing the systems: \(error)")
+        }
+    }
+
+    func testMinimizationTwo() {
+        // https://en.wikipedia.org/wiki/Test_functions_for_optimization
+        // Booth Function
+        let x = Variable("x")
+        let y = Variable("y")
+
+        let system: System = []
+
+        do {
+            let cost: Node = (x + 2*y - 7)**2 + (2*x + y - 5)**2
+            let (values, errors, iterations) = try system.minimize(cost, using: SwiftBackend.self)
+
+            XCTAssertEqual(values[x]!, 1.0, accuracy: 0.0001)
+            XCTAssertEqual(values[y]!, 3.0, accuracy: 0.0001)
+
+        } catch {
+            XCTFail("An unexpected error occured while minimizing the systems: \(error)")
+        }
+    }
+
+    func testMinimizationThree() {
+        // https://en.wikipedia.org/wiki/Test_functions_for_optimization
+        // Easom Function
+        let x = Variable("x")
+        let y = Variable("y")
+
+        let system: System = []
+
+        do {
+            let cost: Node = -1*Cos(x)*Cos(y)*Exp(-1*((x-Number(Double.pi))**2+(y-Number(Double.pi))**2))
+            let (values, errors, iterations) = try system.minimize(cost, using: SwiftBackend.self)
+
+            XCTAssertEqual(values[x]!, Double.pi, accuracy: 0.0001)
+            XCTAssertEqual(values[y]!, Double.pi, accuracy: 0.0001)
+
+        } catch {
+            XCTFail("An unexpected error occured while minimizing the systems: \(error)")
+        }
+    }
+
     static var allTests = [
         ("Leveling Tests", testLeveling),
         ("Rational Simplifying Tests", testRationalSimplifying),
@@ -257,5 +317,8 @@ final class SymbolLabTests: XCTestCase {
         ("Test Replace", testReplace),
         ("Test Derivative Solving #1", testDerivativeSolvingOne),
         ("Test Derivative Solving #2", testDerivativeSolvingTwo),
+        ("Test Minimization #1", testMinimizationOne),
+        ("Test Minimization #2", testMinimizationTwo),
+        ("Test Minimization #3", testMinimizationThree),
     ]
 }

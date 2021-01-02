@@ -161,7 +161,11 @@ public class Divide: Node, Operation {
 
         // Combine numbers into one
         if(leftIsNum && rightIsNum) {
-            return Number((leftSimplified as! Number).value / (rightSimplified as! Number).value)
+            let rightValue = (rightSimplified as! Number).value
+            guard rightValue != 0.0 else {
+                return Divide(leftSimplified, rightSimplified)
+            }
+            return Number((leftSimplified as! Number).value / rightValue)
         }
 
         let leftIsDiv = leftSimplified as? Divide != nil
@@ -184,6 +188,8 @@ public class Divide: Node, Operation {
             // Default case
             if(rightSimplified == Number(1)) {
                 return leftSimplified
+            } else if(leftSimplified == Number(0.0)) {
+                return Number(0.0)
             } else {
                 var simplifiedDiv: Divide = Divide(leftSimplified, rightSimplified)
                 return cancelTerms(simplifiedDiv)

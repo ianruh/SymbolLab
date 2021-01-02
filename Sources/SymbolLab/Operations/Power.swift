@@ -80,7 +80,20 @@ public class Power: Node, Operation {
     
     @inlinable
     override public func evaluate(withValues values: [Node: Double]) throws -> Double {
-        return try Double.pow(self.left.evaluate(withValues: values), self.right.evaluate(withValues: values))
+        // Explanation for the weirdness here: https://github.com/apple/swift-numerics/pull/82
+
+        let leftValue: Double = try self.left.evaluate(withValues: values)
+        let rightValue: Double = try self.right.evaluate(withValues: values)
+
+        if(leftValue > 0) {
+            return Double.pow(leftValue, rightValue)
+        } else {
+            if let rightValueInt = Int(exactly: rightValue) {
+                return Double.pow(leftValue, rightValueInt)
+            } else {
+                throw SymbolLabError.undefinedValue("Non-integer exponents of negatives are not currently supported: \(leftValue)^\(rightValue)")
+            }
+        }
     }
 
     override internal func equals(_ otherNode: Node) -> Bool {
@@ -121,7 +134,18 @@ public class Power: Node, Operation {
         } else if(rightIsNum && (rightSimplified as! Number) == Number(0)) {
             return Number(1)
         } else if(leftIsNum && rightIsNum) {
-            return Number(Double.pow((leftSimplified as! Number).value, (rightSimplified as! Number).value))
+            // Explanation for the weirdness here: https://github.com/apple/swift-numerics/pull/82
+            let leftValue = (leftSimplified as! Number).value
+            let rightValue = (rightSimplified as! Number).value
+            if(leftValue > 0) {
+                return Number(Double.pow(leftValue, rightValue))
+            } else {
+                if let rightValueInt = Int(exactly: rightValue) {
+                    return Number(Double.pow(leftValue, rightValueInt))
+                } else {
+                    return Power(leftSimplified, rightSimplified)
+                }
+            }
         }
 
         return Power(leftSimplified, rightSimplified)

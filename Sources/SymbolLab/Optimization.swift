@@ -7,7 +7,7 @@ public extension System {
             Z = Z + Variable("λ\(i)")*equations[i]
         }
 
-        let grad = Gradient(Z)
+        let grad = Gradient(Z).simplify()
         return try grad.solve(using: backend)
     }
 }

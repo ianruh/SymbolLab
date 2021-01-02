@@ -16,4 +16,5 @@ public enum SymbolLabError: Error {
     case cannotReplaceNode(_ msg: String)
     case multipleIndependentVariables(_ msg: String)
     case misc(_ message: String)
+    case undefinedValue(_ msg: String)
 }

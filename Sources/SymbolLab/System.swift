@@ -222,4 +222,8 @@ public class System: ExpressibleByArrayLiteral, CustomStringConvertible {
         arr.append(contentsOf: rhs.equations)
         return System(arr)
     }
+
+    public func simplify() -> System {
+        return System(self.equations.map({$0.simplify()}))
+    }
 }
