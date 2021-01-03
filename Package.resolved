@@ -5,8 +5,8 @@
         "package": "LASwift",
         "repositoryURL": "https://github.com/ianruh/LASwift.git",
         "state": {
-          "branch": "linsolve",
-          "revision": "b8800b1077e22a48280d432ceb6ada025efeee30",
+          "branch": "linux",
+          "revision": "85e69c157fd6126882842bc52222d1a2ec8dca58",
           "version": null
         }
       },
@@ -59,9 +59,9 @@
         "package": "swift-argument-parser",
         "repositoryURL": "https://github.com/apple/swift-argument-parser",
         "state": {
-          "branch": null,
-          "revision": "223d62adc52d51669ae2ee19bdb8b7d9fd6fcd9c",
-          "version": "0.0.6"
+          "branch": "main",
+          "revision": "4273ad222e6c51969e8585541f9da5187ad94e47",
+          "version": null
         }
       },
       {
@@ -71,24 +71,6 @@
           "branch": null,
           "revision": "6b24333510e9044cf4716a07bed65eeed6bc6393",
           "version": "0.0.8"
-        }
-      },
-      {
-        "package": "SwiftPlot",
-        "repositoryURL": "https://github.com/KarthikRIyer/swiftplot.git",
-        "state": {
-          "branch": null,
-          "revision": "c5424eb8688217029d44e941d3a1d2ccc18c3a82",
-          "version": "2.0.0"
-        }
-      },
-      {
-        "package": "SymEngine",
-        "repositoryURL": "https://github.com/ianruh/SymEngine.swift",
-        "state": {
-          "branch": null,
-          "revision": "a0d9bc530d7d5a104ce69308d1c165fa3af0e5f2",
-          "version": "0.0.2"
         }
       }
     ]

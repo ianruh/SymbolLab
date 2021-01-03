@@ -101,7 +101,7 @@ extension Set {
 }
 
 extension Double {
-    /// Get a sixe decimal accuracy number
+    /// Get a six decimal accuracy number
     public var sixAc: String {
         return String(format: "%0.6f", self)
     }

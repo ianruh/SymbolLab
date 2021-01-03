@@ -5,7 +5,7 @@
 //  Created by Ian Ruh on 5/14/20.
 //
 
-public class Node: CustomStringConvertible {
+public class Node: CustomStringConvertible, Comparable, Hashable {
 
     //------------------------ Properties ------------------------
 
@@ -23,7 +23,17 @@ public class Node: CustomStringConvertible {
     }
 
     /// The set of varibales in the node. This should be overridden.
-    public var variables: Set<String> {
+    public var variables: Set<Variable> {
+        preconditionFailure("variables should be overridden")
+    }
+
+    /// The set of derivatives in the node. This should be overriden.
+    public var derivatives: Set<Derivative> {
+        preconditionFailure("derivatives should be overridden")
+    }
+
+    /// The type identifier of the class. This should be overriden.
+    public var typeIdentifier: String {
         preconditionFailure("variables should be overridden")
     }
 
@@ -35,6 +45,11 @@ public class Node: CustomStringConvertible {
     /// Dertermine if the node is a variable
     public var isVariable: Bool {
         return self as? Variable != nil
+    }
+
+    /// Dertermine if the node is a variable
+    public var isNumber: Bool {
+        return self as? Number != nil
     }
 
     /// Determine if the node is an operation
@@ -49,14 +64,11 @@ public class Node: CustomStringConvertible {
 
     /// Determin if the node is and ODE. If so, return a tuple of the independent and dependent variable.
     public var isODE: (dep: Variable, ind: Variable, derId: Id)? {
-        let ids = self.contains(nodeType: Derivative.self)
-        // Need one derivative
-        if(ids.count == 1) {
-            // Check the independent and dependent variables are just variables
-            guard let der = self.getNode(withId: ids[0]) as? Derivative else {fatalError("Something weird happened")}
-            guard let dep = der.diffOf as? Variable else {return nil}
-            guard let ind = der.withRespectTo as? Variable else {return nil}
-            return (dep: dep, ind: ind, derId: ids[0])
+        let derivatives = Array(self.derivatives)
+        if(derivatives.count > 1) {
+            guard let dep = derivatives[0].diffOf as? Variable else {return nil}
+            guard let ind = derivatives[0].withRespectTo as? Variable else {return nil}
+            return (dep: dep, ind: ind, derId: Id())
         }
         return nil
     }
@@ -67,18 +79,15 @@ public class Node: CustomStringConvertible {
         preconditionFailure("This method must be overridden")
     }
 
-    /// Generate random node with option. This should be overridden.
-    public func generate(withOptions options: GeneratorOptions, depths: Depths) -> Node {
-        preconditionFailure("This method must be overridden")
-    }
-
-    /// Get an svg of the node. This should be overridden.
-    public func svg(using source: SVGSource) -> SVGElement? {
-        preconditionFailure("This method must be overridden")
-    }
-
     /// Evaluate the node. This should be overridden.
-    public func evaluate(withValues values: [String: Double]) throws -> Double {
+    public func evaluate(withValues values: [Node: Double]) throws -> Double {
+        preconditionFailure("This method must be overridden")
+    }
+
+    /// Function returns whether the other node logically equals this function
+    /// Note that this assumes both sides are simplified already, so it doesn't
+    /// call simplify itself.
+    internal func equals(_ otherNode: Node) -> Bool {
         preconditionFailure("This method must be overridden")
     }
 
@@ -101,6 +110,11 @@ public class Node: CustomStringConvertible {
         preconditionFailure("This method must be overridden")
     }
 
+    /// Replace a node with another node.
+    @discardableResult public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        preconditionFailure("This method must be overridden.")
+    }
+
     /// Get the node with the given id.
     ///
     /// - Parameter id: Id of the node to get.
@@ -108,48 +122,114 @@ public class Node: CustomStringConvertible {
     public func getNode(withId id: Id) -> Node? {
         preconditionFailure("This method must be overridden")
     }
+
+    /// Simplify the node
+    ///
+    /// - Returns: The simplified node, or the same node if no simplification has been performed.
+    public func simplify() -> Node {
+        preconditionFailure("This method must be overridden")
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        preconditionFailure("This method must be overriden")
+    }
+
+    //--------------Comparable Conformance-----------------
+
+    public static func ==(_ lhs: Node, _ rhs: Node) -> Bool {
+        return lhs.equals(rhs)
+    }
+
+    public static func ~=(_ lhs: Node, _ rhs: Node) -> Bool {
+        return lhs.simplify() == rhs.simplify()
+    }
+
+    /// Only does a cursory comparison of types. Will be correct for numbers and variables,
+    /// nut otherwise only compares the types of the nodes.
+    ///
+    /// Opertions < Variables < Numbers
+    public static func <(_ lhs: Node, _ rhs: Node) -> Bool {
+        if(lhs.isOperation && rhs.isOperation) {
+            return lhs.typeIdentifier < rhs.typeIdentifier
+        } else if(lhs.isOperation &&  rhs.isBasic) {
+            return true
+        } else if(lhs.isBasic && rhs.isOperation) {
+            return false
+        } else if(lhs.isVariable && rhs.isVariable) {
+            return (lhs as! Variable).string < (rhs as! Variable).string
+        } else if(lhs.isVariable && rhs.isNumber) {
+            return true
+        } else if(lhs.isNumber && rhs.isVariable) {
+            return false
+        } else if(lhs.isNumber && rhs.isNumber) {
+            return (lhs as! Number).value < (rhs as! Number).value
+        } else {
+            // This shouldn't ever run, but just in case
+            preconditionFailure("Less than last case should never run")
+            return lhs.typeIdentifier < rhs.typeIdentifier
+        }
+    }
 }
 
-public class Number: Node, ExpressibleByIntegerLiteral {
+public class Number: Node, ExpressibleByIntegerLiteral, ExpressibleByFloatLiteral {
     public typealias IntegerLiteralType = Int
+    public typealias FloatLiteralType = Double
+    
 
-    public var value: Int
+    public var value: Double
     
     override public var description: String {
         return "\(self.value)"
     }
 
-    override public var variables: Set<String> {
+    override public var variables: Set<Variable> {
         return []
+    }
+
+    override public var derivatives: Set<Derivative> {
+        return []
+    }
+
+    override public var typeIdentifier: String {
+        return "\(self.value)"
     }
     
     override public var latex: String {
         return "\(self.value)"
     }
     
-    public init(_ num: Int) {
+    public convenience init(_ num: Int) {
+        self.init(Double(num))
+    }
+
+    public init(_ num: Double) {
         self.value = num
     }
 
     required public convenience init(integerLiteral value: Int) {
+        self.init(Double(value))
+    }
+
+    required public convenience init(floatLiteral value: Double) {
         self.init(value)
     }
 
     public override func getSymbol<Engine: SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
-        return Engine.new(self.value)
+        let t = Engine.new(self.value)
+        return t
+    }
+    
+    @inlinable
+    override public func evaluate(withValues values: [Node : Double]) throws -> Double {
+        return self.value
     }
 
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // No need to use the depths as this is a base node
-        return Number(Int.random(withMaxDigits: options.numbers.maxWholeDigits))
-    }
-    
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        return SVGUtilities.svg(of: self.description, using: source)
-    }
-    
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
-        return Double(self.value)
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let num = otherNode as? Number {
+            return self.value == num.value
+        } else {
+            return false
+        }
     }
 
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
@@ -160,19 +240,21 @@ public class Number: Node, ExpressibleByIntegerLiteral {
         }
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-        // There is nothing to replace, so just return false.
-        return false;
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
             return self
         }
-        return nil
+    }
+
+    override public func simplify() -> Node {
+        return self
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("number")
+        hasher.combine(self.value)
     }
 }
 
@@ -190,8 +272,16 @@ public class Variable: Node, ExpressibleByStringLiteral {
         return "\(self.string)"
     }
     
-    override public var variables: Set<String> {
-        return [self.string]
+    override public var variables: Set<Variable> {
+        return [self]
+    }
+
+    override public var derivatives: Set<Derivative> {
+        return []
+    }
+
+    override public var typeIdentifier: String {
+        return self.string
     }
 
     public static func ==(_ lhs: Variable, _ rhs: Variable) -> Bool {
@@ -215,21 +305,22 @@ public class Variable: Node, ExpressibleByStringLiteral {
     override public func getSymbol<Engine:SymbolicMathEngine>(using: Engine.Type) -> Engine.Symbol? {
         return Engine.new(self.string)
     }
-
-    override public func generate(withOptions options: GeneratorOptions, depths: Depths = Depths()) -> Node {
-        // No need to use the depths as this is a base node
-        Variable(options.variables.names.randomElement()!)
-    }
     
-    override public func svg(using source: SVGSource) -> SVGElement? {
-        return SVGUtilities.svg(of: self.string, using: source)
-    }
-    
-    override public func evaluate(withValues values: [String : Double]) throws -> Double {
-        guard values.keys.contains(self.string) else {
-            throw SymbolLabError.noValue(forVariable: self.string)
+    @inlinable
+    override public func evaluate(withValues values: [Node : Double]) throws -> Double {
+        if let value  = values[self] {
+            return value
+        } else {
+            throw SymbolLabError.noValue(forVariable: self.description)
         }
-        return values[self.string]!
+    }
+
+    override internal func equals(_ otherNode: Node) -> Bool {
+        if let variable = otherNode as? Variable {
+            return self.string == variable.string
+        } else {
+            return false
+        }
     }
 
     override public func contains<T: Node>(nodeType: T.Type) -> [Id] {
@@ -240,18 +331,20 @@ public class Variable: Node, ExpressibleByStringLiteral {
         }
     }
 
-    public override func replace(id: Id, with replacement: Node) throws -> Bool {
-        guard id != self.id else {
-            throw SymbolLabError.cannotReplaceNode("because cannot replace self.")
-        }
-        // There is nothing to replace, so just return false.
-        return false;
-    }
-
-    public override func getNode(withId id: Id) -> Node? {
-        if(self.id == id) {
+    @discardableResult override public func replace(_ targetNode: Node, with replacement: Node) -> Node {
+        if(targetNode == self) {
+            return replacement
+        } else {
             return self
         }
-        return nil
+    }
+
+    override public func simplify() -> Node {
+        return self
+    }
+
+    override public func hash(into hasher: inout Hasher) {
+        hasher.combine("variable")
+        hasher.combine(self.string)
     }
 }

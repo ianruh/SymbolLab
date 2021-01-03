@@ -21,15 +21,16 @@ public protocol SymbolicMathEngine {
     static func erf(_ param: Symbol) -> Symbol?
 
     // SymbolType Operations
-    static func add(_ lhs: Symbol, _ rhs: Symbol) -> Symbol
+    static func add(_ params: [Symbol]) -> Symbol
     static func subtract(_ lhs: Symbol, _ rhs: Symbol) -> Symbol
     static func divide(_ lhs: Symbol, _ rhs: Symbol) -> Symbol
-    static func multiply(_ lhs: Symbol, _ rhs: Symbol) -> Symbol
+    static func multiply(_ params: [Symbol]) -> Symbol
     static func negate(_ item: Symbol) -> Symbol
     static func exponentiate(_ lhs: Symbol, _ rhs: Symbol) -> Symbol
     
     // Calc
     static func diff(of item: Symbol, withRespectTo: Symbol) -> Symbol?
+    static func partial(of item: Symbol, withRespectTo: Symbol) -> Symbol?
     
     // Trig
     static func sin(_ term: Symbol) -> Symbol?
@@ -40,4 +41,15 @@ public protocol SymbolicMathEngine {
     static func log(_ term: Symbol) -> Symbol?
     static func sqrt(_ term: Symbol) -> Symbol?
     static func exp(_ term: Symbol) -> Symbol?
+}
+
+public extension SymbolicMathEngine {
+
+    public static func add(_ params: Symbol...) -> Symbol {
+        return self.add(params)
+    }
+
+    public static func multiply(_ params: Symbol...) -> Symbol {
+        return self.multiply(params)
+    }
 }
