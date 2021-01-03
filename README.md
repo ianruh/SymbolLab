@@ -1,10 +1,21 @@
 # SymbolLab
 
-This is a sort of numerical modeling framework plus some other stuff. It started as two seperate personal projects, then they sorta merged. So, if there is some functionality that doesn't appear to be related to anything, then it's probably just left from when this was two different things.
+This is an experimental numerical modeling library that should likely not be used for anything important. It incorporates a custom symbolic math library (there are several better ones that could have been used, e.g. SymEngine, but this project is significantly for learning purposes.), an acausal modeling system, and first-order ODE solving.
 
 ## Getting Started
 
-First off, at the moment, I only have a symbolic math backend written for [SymEngine](https://github.com/symengine/symengine), using the [SymEngine.swift](https://github.com/ianruh/SymEngine.swift) wrapper for it. So, first install SymEngine, following the directions in SymEngine.swift. 
+The easiest way to get the code running is by building the docker file contained in the repository:
+
+```
+$ docker build -f docker/Dockerfile -t symbollab:base .
+$ docker build -f docker/Dockerfile.extended -t symbollab:examples .
+$ docker run --rm -it symbollab:examples /bin/bash
+root@------------:/SymbolLab# swift run examples spring --no-gui
+```
+
+You should be met by some ascii art of the position and velocity graphs of a damped harmonic oscillator. If you omit the `--no-gui` flag, then the results are plotted with matplotlib (shown below), but this will not work if it is running in a docker container.
+
+## Example Walkthrough
 
 **Damped Oscillator**
 
@@ -68,13 +79,9 @@ do {
 
 The current method for solving ODEs is just forward euler, so it won't be very stable or accurate comparatively. I'm planning on implementing a solver framework to support general implicit and explicit methods.
 
-**Symbolic Math Engine**
-
-At the moment, the only symbolic math backend implemented is for SymEngine, however, it should be pretty simple to implement one that uses SymPy. Additionally, a pure swift on could be written without too much hassle to do basic operations.
-
 **Supported Platforms**
 
-This will only work on macOS at the moment. The only thing holding it back from Linux (and I think it would also work on Windows after) is that the Swift wrapper this is using for BLAS ([LASwift](https://github.com/AlexanderTar/LASwift)) uses the BLAS that is part of Apple's Accelerate framework explicitly, rather than a general BLAS implementation. Once that is generalized, it should be able to run on Linux and Windows.
+MacOS and Linux. No reason it shouldn't work on windows that I know of, but I haven't tested it.
 
 ## FAQ
 
@@ -118,9 +125,8 @@ Not if you value your job.
 *In order*
 
 - [x] Symoblic math operations (simplification, cannonical forms, fix the derivative of variables) based on [this](http://www.math.wpi.edu/IQP/BVCalcHist/calc5.html#_Toc407004380).
-- [ ] Check the handling of implicit derivatives. I don't remeber what this was.
-- [ ] Derivatives as solvable values.
-- [ ] Assume Young's Theorem for the symmetry of partials
+- [x] Check the handling of implicit derivatives. I don't remeber what this was.
+- [x] Derivatives as solvable values.
 - [ ] Implicit integration framework (euler, RK maybe)
 - [ ] Derivatives of the solution to ODE at furture time T.
 - [ ] Optimization over systems of non-linear ODEs.

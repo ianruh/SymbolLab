@@ -7,10 +7,6 @@
 import Foundation
 import ArgumentParser
 
-// dampedMassSpring()
-//rocket()
-// minimizeExample()
-
 struct Examples: ParsableCommand {
     static var configuration = CommandConfiguration(
         abstract: "Examples for the SymbolLab library.",
@@ -21,8 +17,11 @@ extension Examples {
     struct DampedSpring: ParsableCommand {
         static var configuration = CommandConfiguration(commandName: "spring", abstract: "Run the damped spring example. Requires python and matplotlib to function.")
 
+        @Flag(inversion: .prefixedNo, help: "Display the output in the terminal, rather than with matplotlib.")
+        var gui = true
+
         mutating func run() {
-            dampedMassSpring()
+            dampedMassSpring(withGui: gui)
         }
     }
 

@@ -2,7 +2,7 @@ import SymbolLab
 import PythonKit
 import SwiftBackend
 
-func dampedMassSpring() {
+func dampedMassSpring(withGui: Bool = true) {
     let m: Number = 1.0          // Mass
     let k: Number = 4.0          // Spring constant
     let b: Number = 0.4          // Damping parameter
@@ -23,6 +23,7 @@ func dampedMassSpring() {
 
     do {
         let plt = try Python.import("matplotlib.pyplot")
+        let tpl  = try Python.import("termplotlib")
         let np = try Python.import("numpy")
 
         // Solve the system and extract the position and velocity
@@ -35,9 +36,23 @@ func dampedMassSpring() {
         let xarr = np.array(xVals)
         let varr = np.array(vVals)
 
-        plt.plot(xarr)
-        plt.plot(varr)
-        plt.show()
+        if(withGui) {
+            plt.plot(xarr)
+            plt.plot(varr)
+            plt.show()
+
+            print("If you did not see anything, try running with the '--no-gui' flag.")
+        } else {
+            let figure1 = tpl.figure()
+            print("              ================== Position vs. Time ==================")
+            figure1.plot(tVals, xarr)
+            figure1.show()
+
+            let figure2 = tpl.figure()
+            print("\n\n              ================== Velocity vs. Time ==================")
+            figure2.plot(tVals, varr)
+            figure2.show()
+        }
 
     } catch {
         print(error)
