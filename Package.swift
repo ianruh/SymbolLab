@@ -19,7 +19,8 @@ var products: [Product] = [
 var dependencies: [PackageDescription.Package.Dependency] = [
     .package(url: "https://github.com/apple/swift-numerics", from: "0.0.8"),
     .package(url: "https://github.com/ianruh/LASwift.git", .branch("linux")),
-    .package(url: "https://github.com/pvieito/PythonKit.git", .branch("master"))
+    .package(url: "https://github.com/pvieito/PythonKit.git", .branch("master")),
+    .package(url: "https://github.com/apple/swift-argument-parser", .branch("main")),
 ]
 
 var targets: [Target] = [
@@ -39,7 +40,8 @@ var targets: [Target] = [
         name: "Examples",
         dependencies: ["SymbolLab",
                         "PythonKit",
-                        "SwiftBackend"])
+                        "SwiftBackend",
+                        .product(name: "ArgumentParser", package: "swift-argument-parser")])
 ]
 
 #if SYMENGINE
